@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReserveChannelStoragesTests", "ReserveChannelStoragesTests\ReserveChannelStoragesTests.csproj", "{57A4F9F0-05B2-47F5-8729-8C5B8BC63C65}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Generator", "Generator\Generator.csproj", "{F76BB7ED-903E-4FAD-B920-A6F53A83909B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{57A4F9F0-05B2-47F5-8729-8C5B8BC63C65}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{57A4F9F0-05B2-47F5-8729-8C5B8BC63C65}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{57A4F9F0-05B2-47F5-8729-8C5B8BC63C65}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{57A4F9F0-05B2-47F5-8729-8C5B8BC63C65}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F76BB7ED-903E-4FAD-B920-A6F53A83909B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F76BB7ED-903E-4FAD-B920-A6F53A83909B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F76BB7ED-903E-4FAD-B920-A6F53A83909B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F76BB7ED-903E-4FAD-B920-A6F53A83909B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
