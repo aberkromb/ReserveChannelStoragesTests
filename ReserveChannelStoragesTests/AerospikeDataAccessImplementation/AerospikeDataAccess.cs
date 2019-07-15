@@ -25,7 +25,7 @@ namespace ReserveChannelStoragesTests.AerospikeDataAccessImplementation
         public async Task<Unit> Add(AerospikeDataObject @object, CancellationToken token)
         {
             var key = new Key(@object.Namespace, @object.SetName, @object.Key);
-            var bin = new Bin("msg", JsonConvert.SerializeObject(@object));
+            var bin = new Bin("msg", @object.Data);
             await _client.Put(_writePolicy, token, key, bin);
             
             return Unit.Value;

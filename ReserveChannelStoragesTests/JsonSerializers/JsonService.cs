@@ -1,4 +1,5 @@
 using System;
+using ReserveChannelStoragesTests.JsonSerializers;
 
 namespace ReserveChannelStoragesTests.Json
 {

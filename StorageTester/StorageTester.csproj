@@ -1,14 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
+        <OutputType>Exe</OutputType>
         <TargetFramework>netcoreapp3.0</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\Generator\Generator.csproj" />
+      <ProjectReference Include="..\ReserveChannelStoragesTests\ReserveChannelStoragesTests.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
       <PackageReference Include="Aerospike.Client" Version="3.8.1" />
-      <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
-      <PackageReference Include="Utf8Json" Version="1.3.7" />
-      <PackageReference Include="ZeroFormatter" Version="1.6.4" />
     </ItemGroup>
 
 </Project>

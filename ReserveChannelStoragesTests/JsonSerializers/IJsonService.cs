@@ -1,4 +1,4 @@
-namespace ReserveChannelStoragesTests.Json
+namespace ReserveChannelStoragesTests.JsonSerializers
 {
     public interface IJsonService
     {

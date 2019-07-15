@@ -1,28 +1,65 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Aerospike.Client;
+using Newtonsoft.Json;
 using ReserveChannelStoragesTests.AerospikeDataAccessImplementation;
-using ReserveChannelStoragesTests.Telemetry;
+using ReserveChannelStoragesTests.JsonSerializers;
+using static ReserveChannelStoragesTests.Telemetry.TelemetryService;
 
 namespace ReserveChannelStoragesTests
 {
-    public class AerospikeDataProvider: IDataAccess<AerospikeDataObject, Key>
+    public class AerospikeDataProvider : IDataAccess<AerospikeDataObject, Key>
     {
-        private readonly IDataAccess<AerospikeDataObject, Key> _dataAccess;
+        private AsyncClient _client;
 
-        public AerospikeDataProvider(IDataAccess<AerospikeDataObject, Key> dataAccess) => _dataAccess = dataAccess;
+        private WritePolicy _writePolicy;
+        private Policy _policy;
+
+        private IJsonService _jsonService;
+
+
+        public AerospikeDataProvider(AsyncClient client, IJsonService jsonService)
+        {
+            _client = client;
+            this._jsonService = jsonService;
+
+            _writePolicy = new WritePolicy();
+            _policy = new Policy();
+        }
+
 
         public Task<Unit> Add(AerospikeDataObject @object, CancellationToken token)
         {
-            Task<Unit> Func() => _dataAccess.Add(@object, token);
+            Task<Unit> Func() => AddInternal(@object, token);
 
-            return TelemetryService.MeasureIt(Func);
+            return MeasureIt(Func);
         }
+
+
+        private async Task<Unit> AddInternal(AerospikeDataObject @object, CancellationToken token)
+        {
+            var key = new Key(@object.Namespace, @object.SetName, @object.Key);
+            var bin = new Bin("msg", @object.Data);
+            
+            await _client.Put(_writePolicy, token, key, bin);
+
+            return Unit.Value;
+        }
+
 
         public Task<AerospikeDataObject> Get(Key key, CancellationToken token)
         {
-            Task<AerospikeDataObject> Func() => _dataAccess.Get(key, token);
-            return TelemetryService.MeasureIt(Func);
+            Task<AerospikeDataObject> Func() => GetInternal(key, token);
+            return MeasureIt(Func);
+        }
+
+
+        private async Task<AerospikeDataObject> GetInternal(Key key, CancellationToken token)
+        {
+            var record = await _client.Get(_policy, token, key);
+            var data = (byte[]) record.GetValue("msg");
+            
+            return new AerospikeDataObject{Data = data, Key = key.userKey.ToInteger(), Namespace = key.ns, SetName = key.setName};
         }
     }
 }

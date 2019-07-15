@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using Newtonsoft.Json;
+using ReserveChannelStoragesTests.JsonSerializers;
 
 namespace ReserveChannelStoragesTests.Json
 {
