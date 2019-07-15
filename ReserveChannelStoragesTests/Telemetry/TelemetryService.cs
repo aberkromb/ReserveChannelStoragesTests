@@ -25,6 +25,20 @@ namespace ReserveChannelStoragesTests.Telemetry
             return functionResult;
         }
 
+        private static Dictionary<string, List<long>> ToDictionary()
+        {
+            var dict = new Dictionary<string, List<long>>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var (callerName, time) in measurements)
+            {
+                if (dict.ContainsKey(callerName))
+                    dict[callerName].Add(time);
+                else
+                    dict[callerName] = new List<long> {time};
+            }
+
+            return dict;
+        }
 
         public static MeasurementsResult GetMeasurementsResult() =>
             new MeasurementsResult
@@ -34,8 +48,9 @@ namespace ReserveChannelStoragesTests.Telemetry
                 Max = measurements.Max(tuple => tuple.Item2),
                 Min = measurements.Min(tuple => tuple.Item2),
                 Count = measurements.Count,
-                Measurements = measurements,
-                Total = measurements.Aggregate(new TimeSpan(), (span, tuple) => span.Add(TimeSpan.FromMilliseconds(tuple.Item2)))
+                Measurements = ToDictionary(),
+                TotalElapsed = measurements.Aggregate(TimeSpan.Zero,
+                    (span, tuple) => span.Add(TimeSpan.FromMilliseconds(tuple.Item2)))
             };
     }
 
@@ -47,12 +62,12 @@ namespace ReserveChannelStoragesTests.Telemetry
         public long Min { get; set; }
 
         public int Count { get; set; }
-        public IEnumerable<(string, long)> Measurements { get; set; }
-        public TimeSpan Total { get; set; }
+        public Dictionary<string, List<long>> Measurements { get; set; }
+        public TimeSpan TotalElapsed { get; set; }
 
 
         public override string ToString() =>
-            $"Average: {Average}, Median: {Median}, Max: {Max}, Min: {Min}, Count: {Count}, Total: {Total}";
+            $"Average: {Average}, Median: {Median}, Max: {Max}, Min: {Min}, Count: {Count}, Total: {TotalElapsed}";
     }
 
     public static class TelemetryExtensions

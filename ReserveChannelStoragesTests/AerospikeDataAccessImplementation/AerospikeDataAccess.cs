@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Aerospike.Client;
@@ -55,8 +56,15 @@ namespace ReserveChannelStoragesTests
         {
             var record = await _client.Get(_policy, token, key);
             var data = (byte[]) record.GetValue("msg");
-
-            return new AerospikeDataObject { Data = data, Key = key.userKey.ToInteger(), Namespace = key.ns, SetName = key.setName };
+            return new AerospikeDataObject
+                {Data = data, Key = key.userKey.ToInteger(), Namespace = key.ns, SetName = key.setName};
         }
+
+
+        public async Task<List<AerospikeDataObject>> GetAll(Key key, CancellationToken token)
+        {
+            var records = _client.ScanAll(new ScanPolicy(), key.ns, key.setName, );
+        }
+        
     }
 }

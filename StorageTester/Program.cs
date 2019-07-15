@@ -18,7 +18,8 @@ namespace StorageTester
         {
             var users = UserGenerator.CreateRandomUsers(10000);
 
-            var asyncClient = new AsyncClient("localhost", 3000);
+//            var asyncClient = new AsyncClient("localhost", 3000);
+            var asyncClient = new AsyncClient("192.168.99.100", 3000);
             var dataAccess = new AerospikeDataAccess(asyncClient);
 
 
