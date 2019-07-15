@@ -33,7 +33,9 @@ namespace ReserveChannelStoragesTests.Telemetry
                 Median = measurements.Median(tuple => tuple.Item2),
                 Max = measurements.Max(tuple => tuple.Item2),
                 Min = measurements.Min(tuple => tuple.Item2),
-                Count = measurements.Count
+                Count = measurements.Count,
+                Measurements = measurements,
+                Total = measurements.Aggregate(new TimeSpan(), (span, tuple) => span.Add(TimeSpan.FromMilliseconds(tuple.Item2)))
             };
     }
 
@@ -45,10 +47,12 @@ namespace ReserveChannelStoragesTests.Telemetry
         public long Min { get; set; }
 
         public int Count { get; set; }
+        public IEnumerable<(string, long)> Measurements { get; set; }
+        public TimeSpan Total { get; set; }
 
 
         public override string ToString() =>
-            $"Average: {Average}, Median: {Median}, Max: {Max}, Min: {Min}, Count: {Count}";
+            $"Average: {Average}, Median: {Median}, Max: {Max}, Min: {Min}, Count: {Count}, Total: {Total}";
     }
 
     public static class TelemetryExtensions

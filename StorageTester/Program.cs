@@ -1,34 +1,49 @@
-﻿using System.Text;
+﻿using System;
+using System.Linq;
+using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Aerospike.Client;
+using Generator;
 using Newtonsoft.Json;
 using ReserveChannelStoragesTests;
 using ReserveChannelStoragesTests.AerospikeDataAccessImplementation;
-using ReserveChannelStoragesTests.Json;
+using ReserveChannelStoragesTests.Telemetry;
 
 namespace StorageTester
 {
     class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
-            var users = Generator.UserGenerator.CreateRandomUsers(1);
+            var users = UserGenerator.CreateRandomUsers(10000);
 
             var asyncClient = new AsyncClient("localhost", 3000);
-            var dataAccess = new AerospikeDataProvider(asyncClient, new NewtonsoftJsonWrapper());
+            var dataAccess = new AerospikeDataAccess(asyncClient);
 
 
-            foreach (var user in users)
+            for (var i = 0; i < users.Count; i++)
             {
-                dataAccess.Add(new AerospikeDataObject
-                               {
-                                   Key = 1,
-                                   Namespace = "reserve_channel",
-                                   SetName = "messages",
-                                   Data = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(user))
-                               },
-                               CancellationToken.None);
+                var user = users[i];
+                var reserveChannel = "reserve_channel";
+                var messages = "messages";
+
+                var dataObj = new AerospikeDataObject
+                              {
+                                  Key = i,
+                                  Namespace = reserveChannel,
+                                  SetName = messages,
+                                  Data = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(user))
+                              };
+
+                await dataAccess.Add(dataObj, CancellationToken.None);
+
+                var dataObject = await dataAccess.Get(new Key(reserveChannel, messages, i), CancellationToken.None);
+
+//                Console.WriteLine(dataObj.Data.SequenceEqual(dataObject.Data) & dataObj.Key.Equals(dataObject.Key));
             }
+
+            Console.WriteLine(TelemetryService.GetMeasurementsResult());
         }
     }
 }
