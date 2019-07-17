@@ -16,7 +16,7 @@ namespace StorageTester
     {
         static async Task Main(string[] args)
         {
-            var users = UserGenerator.CreateRandomUsers(10000);
+            var users = UserGenerator.CreateRandomUsers(10);
 
 //            var asyncClient = new AsyncClient("localhost", 3000);
             var asyncClient = new AsyncClient("192.168.99.100", 3000);
@@ -30,12 +30,12 @@ namespace StorageTester
                 var messages = "messages";
 
                 var dataObj = new AerospikeDataObject
-                              {
-                                  Key = i,
-                                  Namespace = reserveChannel,
-                                  SetName = messages,
-                                  Data = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(user))
-                              };
+                {
+                    Key = i,
+                    Namespace = reserveChannel,
+                    SetName = messages,
+                    Data = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(user))
+                };
 
                 await dataAccess.Add(dataObj, CancellationToken.None);
 
@@ -44,7 +44,10 @@ namespace StorageTester
 //                Console.WriteLine(dataObj.Data.SequenceEqual(dataObject.Data) & dataObj.Key.Equals(dataObject.Key));
             }
 
-            Console.WriteLine(TelemetryService.GetMeasurementsResult());
+            var list = dataAccess.GetAll(new Key("reserve_channel", "messages", 1), CancellationToken.None);
+
+            foreach (var measurementsResult in TelemetryService.GetMeasurementsResult())
+                Console.WriteLine(measurementsResult);
         }
     }
 }

@@ -15,6 +15,9 @@ namespace ReserveChannelStoragesTests
 
         private WritePolicy _writePolicy;
         private Policy _policy;
+        private ScanPolicy _scanPolicy;
+
+        private const string defaultBinName = "msg";
 
 
         public AerospikeDataAccess(AsyncClient client)
@@ -23,6 +26,7 @@ namespace ReserveChannelStoragesTests
 
             _writePolicy = new WritePolicy();
             _policy = new Policy();
+            _scanPolicy = new ScanPolicy();
         }
 
 
@@ -36,8 +40,8 @@ namespace ReserveChannelStoragesTests
 
         private async Task<Unit> AddInternal(AerospikeDataObject @object, CancellationToken token)
         {
-            var key = new Key(@object.Namespace, @object.SetName, @object.Key);
-            var bin = new Bin("msg", @object.Data);
+            var key = new Key(@object.Namespace, @object.SetName, @object.Key.Value);
+            var bin = new Bin(defaultBinName, @object.Data);
 
             await _client.Put(_writePolicy, token, key, bin);
 
@@ -55,16 +59,29 @@ namespace ReserveChannelStoragesTests
         private async Task<AerospikeDataObject> GetInternal(Key key, CancellationToken token)
         {
             var record = await _client.Get(_policy, token, key);
-            var data = (byte[]) record.GetValue("msg");
-            return new AerospikeDataObject
-                {Data = data, Key = key.userKey.ToInteger(), Namespace = key.ns, SetName = key.setName};
+            return GetAerospikeDataObjectFrom(key, record);
         }
 
+        private static AerospikeDataObject GetAerospikeDataObjectFrom(Key key, Record record)
+        {
+            var data = (byte[]) record.GetValue(defaultBinName);
+            return new AerospikeDataObject
+                {Data = data, Key = key.userKey?.ToInteger(), Namespace = key.ns, SetName = key.setName};
+        }
 
         public async Task<List<AerospikeDataObject>> GetAll(Key key, CancellationToken token)
         {
-            var records = _client.ScanAll(new ScanPolicy(), key.ns, key.setName, );
+            Task<List<AerospikeDataObject>> Func() => GetAllInternal(key, token);
+            return await MeasureIt(Func);
         }
-        
+
+        private Task<List<AerospikeDataObject>> GetAllInternal(Key key, CancellationToken token)
+        {
+            var list = new List<AerospikeDataObject>();
+            _client.ScanAll(_scanPolicy, key.ns, key.setName,
+                (key1, record) => list.Add(GetAerospikeDataObjectFrom(key1, record)));
+
+            return Task.FromResult(list);
+        }
     }
 }

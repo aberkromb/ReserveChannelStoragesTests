@@ -40,17 +40,31 @@ namespace ReserveChannelStoragesTests.Telemetry
             return dict;
         }
 
-        public static MeasurementsResult GetMeasurementsResult() =>
+        public static List<MeasurementsResult> GetMeasurementsResult()
+        {
+            var dict = ToDictionary();
+
+            var results = new List<MeasurementsResult>(dict.Keys.Count);
+
+            foreach (var (opName, measurements) in dict)
+            {
+                results.Add(ToMeasurementsResult(opName, measurements));
+            }
+
+            return results;
+        }
+
+        private static MeasurementsResult ToMeasurementsResult(string operationName, List<long> measurements) =>
             new MeasurementsResult
             {
-                Average = measurements.Average(tuple => tuple.Item2),
-                Median = measurements.Median(tuple => tuple.Item2),
-                Max = measurements.Max(tuple => tuple.Item2),
-                Min = measurements.Min(tuple => tuple.Item2),
+                OperationName = operationName,
+                Average = measurements.Average(),
+                Median = measurements.Median(),
+                Max = measurements.Max(),
+                Min = measurements.Min(),
                 Count = measurements.Count,
-                Measurements = ToDictionary(),
                 TotalElapsed = measurements.Aggregate(TimeSpan.Zero,
-                    (span, tuple) => span.Add(TimeSpan.FromMilliseconds(tuple.Item2)))
+                    (span, milliseconds) => span.Add(TimeSpan.FromMilliseconds(milliseconds)))
             };
     }
 
@@ -62,19 +76,18 @@ namespace ReserveChannelStoragesTests.Telemetry
         public long Min { get; set; }
 
         public int Count { get; set; }
-        public Dictionary<string, List<long>> Measurements { get; set; }
         public TimeSpan TotalElapsed { get; set; }
+        public string OperationName { get; set; }
 
 
         public override string ToString() =>
-            $"Average: {Average}, Median: {Median}, Max: {Max}, Min: {Min}, Count: {Count}, Total: {TotalElapsed}";
+            $"OperationName: {OperationName} Average: {Average}, Median: {Median}, Max: {Max}, Min: {Min}, Count: {Count}, Total: {TotalElapsed}";
     }
 
     public static class TelemetryExtensions
     {
-        public static double Median<T>(this IEnumerable<T> list, Func<T, long> selector)
+        public static double Median(this IEnumerable<long> numbers)
         {
-            var numbers = list.Select(selector);
             int numberCount = numbers.Count();
             int halfIndex = numbers.Count() / 2;
             var sortedNumbers = numbers.OrderBy(n => n);

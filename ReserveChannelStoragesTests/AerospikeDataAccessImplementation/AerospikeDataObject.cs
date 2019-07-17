@@ -15,7 +15,7 @@ namespace ReserveChannelStoragesTests.AerospikeDataAccessImplementation
         /// <summary>
         ///      Ключ в множестве
         /// </summary>
-        public int Key { get; set; }
+        public int? Key { get; set; }
         
         /// <summary>
         ///     Непосредственно сохраняемое значение 

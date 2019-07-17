@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -7,5 +8,6 @@ namespace ReserveChannelStoragesTests
     {
         Task<Unit> Add(TObj @object, CancellationToken token);
         Task<TObj> Get(TKey key, CancellationToken token);
+        Task<List<TObj>> GetAll(TKey key, CancellationToken token);
     }
 }
