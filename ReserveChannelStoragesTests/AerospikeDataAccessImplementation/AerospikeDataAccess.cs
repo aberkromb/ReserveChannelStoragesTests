@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -83,5 +84,13 @@ namespace ReserveChannelStoragesTests
 
             return Task.FromResult(list);
         }
+
+        public Task<bool> Delete(Key key, CancellationToken token)
+        {
+            Task<bool> Func() => DeleteInternal(key, token);
+            return MeasureIt(Func);
+        }
+
+        private Task<bool> DeleteInternal(Key key, CancellationToken token) => _client.Delete(_writePolicy, token, key);
     }
 }

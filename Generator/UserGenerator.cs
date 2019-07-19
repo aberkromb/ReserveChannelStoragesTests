@@ -23,7 +23,7 @@ namespace Generator
                 .RuleFor(user => user.Job, f => f.Name.JobTitle())
                 .RuleFor(user => user.Birthday, f => f.Date.Soon())
                 .RuleFor(user => user.Interests, f => f.Random.WordsArray(5, 10))
-                .RuleFor(user => user.About, f => new string(f.Random.Chars(max: (char)100,count: 100)))
+                .RuleFor(user => user.About, f => f.Lorem.Sentence(100))
                 .Generate(count);
         }
     

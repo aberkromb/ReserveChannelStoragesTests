@@ -9,5 +9,6 @@ namespace ReserveChannelStoragesTests
         Task<Unit> Add(TObj @object, CancellationToken token);
         Task<TObj> Get(TKey key, CancellationToken token);
         Task<List<TObj>> GetAll(TKey key, CancellationToken token);
+        Task<bool> Delete(TKey key, CancellationToken token);
     }
 }
