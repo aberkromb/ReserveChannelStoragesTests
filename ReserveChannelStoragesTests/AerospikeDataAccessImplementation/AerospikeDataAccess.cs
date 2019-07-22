@@ -12,6 +12,8 @@ namespace ReserveChannelStoragesTests
 
     public class AerospikeDataAccess : IDataAccess<AerospikeDataObject, Key>
     {
+        private static readonly string Hostname = "192.168.99.100";
+
         private AsyncClient _client;
 
         private WritePolicy _writePolicy;
@@ -21,9 +23,9 @@ namespace ReserveChannelStoragesTests
         private const string defaultBinName = "msg";
 
 
-        public AerospikeDataAccess(AsyncClient client)
+        public AerospikeDataAccess()
         {
-            _client = client;
+            _client = new AsyncClient(Hostname, 3000);
 
             _writePolicy = new WritePolicy();
             _policy = new Policy();
@@ -63,12 +65,14 @@ namespace ReserveChannelStoragesTests
             return GetAerospikeDataObjectFrom(key, record);
         }
 
+
         private static AerospikeDataObject GetAerospikeDataObjectFrom(Key key, Record record)
         {
             var data = (byte[]) record.GetValue(defaultBinName);
             return new AerospikeDataObject
-                {Data = data, Key = key.userKey?.ToInteger(), Namespace = key.ns, SetName = key.setName};
+                   { Data = data, Key = key.userKey?.ToInteger(), Namespace = key.ns, SetName = key.setName };
         }
+
 
         public async Task<List<AerospikeDataObject>> GetAll(Key key, CancellationToken token)
         {
@@ -76,20 +80,25 @@ namespace ReserveChannelStoragesTests
             return await MeasureIt(Func);
         }
 
+
         private Task<List<AerospikeDataObject>> GetAllInternal(Key key, CancellationToken token)
         {
             var list = new List<AerospikeDataObject>();
-            _client.ScanAll(_scanPolicy, key.ns, key.setName,
-                (key1, record) => list.Add(GetAerospikeDataObjectFrom(key1, record)));
+            _client.ScanAll(_scanPolicy,
+                            key.ns,
+                            key.setName,
+                            (key1, record) => list.Add(GetAerospikeDataObjectFrom(key1, record)));
 
             return Task.FromResult(list);
         }
+
 
         public Task<bool> Delete(Key key, CancellationToken token)
         {
             Task<bool> Func() => DeleteInternal(key, token);
             return MeasureIt(Func);
         }
+
 
         private Task<bool> DeleteInternal(Key key, CancellationToken token) => _client.Delete(_writePolicy, token, key);
     }

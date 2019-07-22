@@ -1,7 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,29 +10,55 @@ using Newtonsoft.Json;
 using ProGaudi.Tarantool.Client;
 using ReserveChannelStoragesTests;
 using ReserveChannelStoragesTests.AerospikeDataAccessImplementation;
-using ReserveChannelStoragesTests.Telemetry;
+using ReserveChannelStoragesTests.PostgresDataAccessImplementation;
+using static System.Console;
+using static ReserveChannelStoragesTests.Telemetry.TelemetryService;
 
 namespace StorageTester
 {
     class Program
     {
-        const string Hostname = "192.168.99.100";
-
         static async Task Main(string[] args)
         {
-            var users = UserGenerator.CreateRandomUsers(10);
+            var users = UserGenerator.CreateRandomData(1);
 
-            var box = await Box.Connect(Hostname, 3301);
+            File.WriteAllText("json.txt", JsonConvert.SerializeObject(users));
 
-            await AerospikeTester(users);
+//            var box = await Box.Connect(Hostname, 3301);
+
+//            await AerospikeTester(users);
         }
 
-        private static async Task AerospikeTester(List<UserGenerator.User> users)
+
+        private static async Task PostgresTester(List<MessageData> messages)
+        {
+            var dataAccess = new PostgresDataAccess();
+
+            for (var i = 0; i < messages.Count; i++)
+            {
+                var message = messages[i];
+
+                var dataObj = new PostgresDataObject { DataObject = message };
+
+                await dataAccess.Add(dataObj, CancellationToken.None);
+
+                var savedObject = await dataAccess.Get(dataObj.DataObject.Id, CancellationToken.None);
+
+                await dataAccess.Delete(dataObj.DataObject.Id, CancellationToken.None);
+            }
+
+            var list = await dataAccess.GetAll(Guid.Empty, CancellationToken.None);
+
+            WriteLine(list.Count);
+
+            GetMeasurementsResult().ForEach(WriteLine);
+        }
+
+
+        private static async Task AerospikeTester(List<MessageData> users)
         {
 //            var asyncClient = new AsyncClient("localhost", 3000);
-            var asyncClient = new AsyncClient(Hostname, 3000);
-            var dataAccess = new AerospikeDataAccess(asyncClient);
-
+            var dataAccess = new AerospikeDataAccess();
 
             for (var i = 0; i < users.Count; i++)
             {
@@ -42,12 +67,12 @@ namespace StorageTester
                 var messages = "messages";
 
                 var dataObj = new AerospikeDataObject
-                {
-                    Key = i,
-                    Namespace = reserveChannel,
-                    SetName = messages,
-                    Data = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(user))
-                };
+                              {
+                                  Key = i,
+                                  Namespace = reserveChannel,
+                                  SetName = messages,
+                                  Data = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(user))
+                              };
 
                 await dataAccess.Add(dataObj, CancellationToken.None);
 
@@ -59,10 +84,9 @@ namespace StorageTester
 
             var list = await dataAccess.GetAll(new Key("reserve_channel", "messages", 1), CancellationToken.None);
 
-            Console.WriteLine(list.Count);
+            WriteLine(list.Count);
 
-            foreach (var measurementsResult in TelemetryService.GetMeasurementsResult())
-                Console.WriteLine(measurementsResult);
+            GetMeasurementsResult().ForEach(WriteLine);
         }
     }
 }

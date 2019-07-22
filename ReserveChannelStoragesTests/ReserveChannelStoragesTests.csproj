@@ -7,9 +7,18 @@
     <ItemGroup>
       <PackageReference Include="Aerospike.Client" Version="3.8.1" />
       <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
+      <PackageReference Include="Npgsql" Version="4.0.8" />
       <PackageReference Include="progaudi.tarantool" Version="0.12.1" />
       <PackageReference Include="Utf8Json" Version="1.3.7" />
       <PackageReference Include="ZeroFormatter" Version="1.6.4" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="KafkaDataAccessImplementation" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Generator\Generator.csproj" />
     </ItemGroup>
 
 </Project>
