@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Aerospike.Client;
 using Generator;
 using Newtonsoft.Json;
-using ProGaudi.Tarantool.Client;
 using ReserveChannelStoragesTests;
 using ReserveChannelStoragesTests.AerospikeDataAccessImplementation;
 using ReserveChannelStoragesTests.PostgresDataAccessImplementation;
@@ -20,13 +19,15 @@ namespace StorageTester
     {
         static async Task Main(string[] args)
         {
-            var users = UserGenerator.CreateRandomData(1);
+            var messages = Generator.Generator.CreateRandomData(1);
 
-            File.WriteAllText("json.txt", JsonConvert.SerializeObject(users));
+            File.WriteAllText("json.txt", JsonConvert.SerializeObject(messages));
 
 //            var box = await Box.Connect(Hostname, 3301);
 
 //            await AerospikeTester(users);
+
+            await PostgresTester(messages);
         }
 
 

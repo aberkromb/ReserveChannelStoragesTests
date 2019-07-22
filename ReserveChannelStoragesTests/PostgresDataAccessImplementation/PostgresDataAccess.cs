@@ -36,6 +36,7 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
                 "INSERT INTO reserve_channel_messages (id, message_date, message_type, additional_headers, application, exception,exchange, message, message_routing_key, persistent, server, ttl)"
                 + "VALUES (@id, @message_date, @message_type, @additional_headers, @application, @exception, @exchange, @message, @message_routing_key, @persistent, @server, @ttl)";
 
+            await this._connection.OpenAsync(token);
             using var command = new NpgsqlCommand(commandText, this._connection);
             command.Parameters.Add(new NpgsqlParameter<Guid>("@id", @object.DataObject.Id));
             command.Parameters.Add(new NpgsqlParameter<DateTimeOffset>("@message_date", @object.DataObject.MessageDate));

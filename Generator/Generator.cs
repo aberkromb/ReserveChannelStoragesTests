@@ -4,9 +4,9 @@ using Bogus;
 
 namespace Generator
 {
-    public class UserGenerator
+    public class Generator
     {
-        public static IEnumerable<MessageData> CreateRandomData(int count) => PrepareFaker().Generate(count);
+        public static List<MessageData> CreateRandomData(int count) => PrepareFaker().Generate(count);
         public static IEnumerable<MessageData> CreateRandomDataLazy(int count) => PrepareFaker().GenerateLazy(count);
 
 
