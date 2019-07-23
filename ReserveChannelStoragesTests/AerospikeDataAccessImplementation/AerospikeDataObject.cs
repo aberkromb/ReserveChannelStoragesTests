@@ -1,3 +1,5 @@
+using Generator;
+
 namespace ReserveChannelStoragesTests.AerospikeDataAccessImplementation
 {
     public class AerospikeDataObject
@@ -20,6 +22,6 @@ namespace ReserveChannelStoragesTests.AerospikeDataAccessImplementation
         /// <summary>
         ///     Непосредственно сохраняемое значение 
         /// </summary>
-        public byte[] Data { get; set; }
+        public MessageData Data { get; set; }
     }
 }

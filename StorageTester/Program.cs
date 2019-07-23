@@ -56,30 +56,31 @@ namespace StorageTester
         }
 
 
-        private static async Task AerospikeTester(List<MessageData> users)
+        private static async Task AerospikeTester(List<MessageData> messages)
         {
 //            var asyncClient = new AsyncClient("localhost", 3000);
-            var dataAccess = new AerospikeDataAccess();
+            var binarySerializer = new ReserveChannelStoragesTests.BinarySerializers.ZeroFormatter();
+            var dataAccess = new AerospikeDataAccess(binarySerializer);
 
-            for (var i = 0; i < users.Count; i++)
+            for (var i = 0; i < messages.Count; i++)
             {
-                var user = users[i];
-                var reserveChannel = "reserve_channel";
-                var messages = "messages";
+                var messageData = messages[i];
+                var ns = "reserve_channel";
+                var setName = "messages";
 
                 var dataObj = new AerospikeDataObject
                               {
                                   Key = i,
-                                  Namespace = reserveChannel,
-                                  SetName = messages,
-                                  Data = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(user))
+                                  Namespace = ns,
+                                  SetName = setName,
+                                  Data = messageData
                               };
 
                 await dataAccess.Add(dataObj, CancellationToken.None);
 
-                var dataObject = await dataAccess.Get(new Key(reserveChannel, messages, i), CancellationToken.None);
+                var dataObject = await dataAccess.Get(new Key(ns, setName, i), CancellationToken.None);
 
-                await dataAccess.Delete(new Key(reserveChannel, messages, i), CancellationToken.None);
+                await dataAccess.Delete(new Key(ns, setName, i), CancellationToken.None);
 //                Console.WriteLine(dataObj.Data.SequenceEqual(dataObject.Data) & dataObj.Key.Equals(dataObject.Key));
             }
 

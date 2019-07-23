@@ -130,6 +130,27 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
         }
 
 
+        public Task<List<PostgresDataObject>> GetAllByCondition(Guid key, CancellationToken token)
+        {
+            Task<List<PostgresDataObject>> Func() => GetAllByConditionInternal(token);
+            return MeasureIt(Func);
+        }
+
+
+        private async Task<List<PostgresDataObject>> GetAllByConditionInternal(CancellationToken token)
+        {
+            var commandText = "delete from reserve_channel_messages where message_date < @date";
+
+            await this.OpenConnection();
+            using var command = new NpgsqlCommand(commandText, this._connection);
+            command.Parameters.Add(new NpgsqlParameter<DateTime>("@date", DateTime.Now.AddDays(-15)));
+
+            await command.ExecuteNonQueryAsync(token);
+
+            return await this.GetAllInternal(token);
+        }
+
+
         private static PostgresDataObject ToDataObject(DbDataReader reader)
         {
             var result = new PostgresDataObject();

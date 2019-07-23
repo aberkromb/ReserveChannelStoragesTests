@@ -10,5 +10,6 @@ namespace ReserveChannelStoragesTests
         Task<TObj> Get(TKey key, CancellationToken token);
         Task<List<TObj>> GetAll(TKey key, CancellationToken token);
         Task<bool> Delete(TKey key, CancellationToken token);
+        Task<List<TObj>> GetAllByCondition(TKey key ,CancellationToken token);
     }
 }

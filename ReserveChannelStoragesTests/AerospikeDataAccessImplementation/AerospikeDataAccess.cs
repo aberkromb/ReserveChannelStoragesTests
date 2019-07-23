@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Aerospike.Client;
+using Generator;
 using ReserveChannelStoragesTests.AerospikeDataAccessImplementation;
+using ReserveChannelStoragesTests.BinarySerializers;
 using static ReserveChannelStoragesTests.Telemetry.TelemetryService;
 
 namespace ReserveChannelStoragesTests
@@ -15,6 +17,7 @@ namespace ReserveChannelStoragesTests
         private static readonly string Hostname = "192.168.99.100";
 
         private AsyncClient _client;
+        private readonly IBinarySerializer _binarySerializer;
 
         private WritePolicy _writePolicy;
         private Policy _policy;
@@ -23,8 +26,10 @@ namespace ReserveChannelStoragesTests
         private const string defaultBinName = "msg";
 
 
-        public AerospikeDataAccess()
+        public AerospikeDataAccess(IBinarySerializer binarySerializer)
         {
+            this._binarySerializer = binarySerializer;
+
             _client = new AsyncClient(Hostname, 3000);
 
             _writePolicy = new WritePolicy();
@@ -44,7 +49,7 @@ namespace ReserveChannelStoragesTests
         private async Task<Unit> AddInternal(AerospikeDataObject @object, CancellationToken token)
         {
             var key = new Key(@object.Namespace, @object.SetName, @object.Key.Value);
-            var bin = new Bin(defaultBinName, @object.Data);
+            var bin = new Bin(defaultBinName, _binarySerializer.Serialize(@object.Data));
 
             await _client.Put(_writePolicy, token, key, bin);
 
@@ -63,14 +68,6 @@ namespace ReserveChannelStoragesTests
         {
             var record = await _client.Get(_policy, token, key);
             return GetAerospikeDataObjectFrom(key, record);
-        }
-
-
-        private static AerospikeDataObject GetAerospikeDataObjectFrom(Key key, Record record)
-        {
-            var data = (byte[]) record.GetValue(defaultBinName);
-            return new AerospikeDataObject
-                   { Data = data, Key = key.userKey?.ToInteger(), Namespace = key.ns, SetName = key.setName };
         }
 
 
@@ -101,5 +98,40 @@ namespace ReserveChannelStoragesTests
 
 
         private Task<bool> DeleteInternal(Key key, CancellationToken token) => _client.Delete(_writePolicy, token, key);
+
+
+        public Task<List<AerospikeDataObject>> GetAllByCondition(Key key, CancellationToken token)
+        {
+            Task<List<AerospikeDataObject>> Func() => GetAllByConditionInternal(key);
+            return MeasureIt(Func);
+        }
+
+
+        private Task< List<AerospikeDataObject>> GetAllByConditionInternal(Key key)
+        {
+            var dt = DateTime.Now.AddDays(-15);
+            bool Predicate(MessageData data) => data.MessageDate < dt;
+
+            var list = new List<AerospikeDataObject>();
+            this._client.ScanAll(this._scanPolicy,
+                            key.ns,
+                            key.setName,
+                            (key1, record) =>
+                            {
+                                var obj = this.GetAerospikeDataObjectFrom(key1, record);
+                                if (Predicate(obj.Data))
+                                    list.Add(obj);
+                            });
+
+            return Task.FromResult(list);
+        }
+
+
+        private AerospikeDataObject GetAerospikeDataObjectFrom(Key key, Record record)
+        {
+            var data = (byte[]) record.GetValue(defaultBinName);
+            return new AerospikeDataObject
+                   { Data = _binarySerializer.Deserialize<MessageData>(data), Key = key.userKey?.ToInteger(), Namespace = key.ns, SetName = key.setName };
+        }
     }
 }
