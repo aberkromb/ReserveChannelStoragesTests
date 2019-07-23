@@ -24,7 +24,7 @@ namespace Generator
                    .RuleFor(o => o.Exception, f => f.Lorem.Word())
                    .RuleFor(o => o.Ttl, f => f.Random.Int())
                    .RuleFor(o => o.Persistent, f => f.Random.Bool())
-                   .RuleFor(o => o.AdditionalHeaders, f => f.Lorem.Sentence(2));
+                   .RuleFor(o => o.AdditionalHeaders, f => f.Lorem.Sentence(4));
         }
 
 

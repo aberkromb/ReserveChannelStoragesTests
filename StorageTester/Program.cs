@@ -19,9 +19,9 @@ namespace StorageTester
     {
         static async Task Main(string[] args)
         {
-            var messages = Generator.Generator.CreateRandomData(1);
+            var messages = Generator.Generator.CreateRandomData(100);
 
-            File.WriteAllText("json.txt", JsonConvert.SerializeObject(messages));
+//            File.WriteAllText("json.txt", JsonConvert.SerializeObject(messages));
 
 //            var box = await Box.Connect(Hostname, 3301);
 

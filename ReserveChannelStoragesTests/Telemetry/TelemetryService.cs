@@ -25,6 +25,7 @@ namespace ReserveChannelStoragesTests.Telemetry
             return functionResult;
         }
 
+
         private static Dictionary<string, List<long>> ToDictionary()
         {
             var dict = new Dictionary<string, List<long>>(StringComparer.OrdinalIgnoreCase);
@@ -34,11 +35,12 @@ namespace ReserveChannelStoragesTests.Telemetry
                 if (dict.ContainsKey(callerName))
                     dict[callerName].Add(time);
                 else
-                    dict[callerName] = new List<long> {time};
+                    dict[callerName] = new List<long> { time };
             }
 
             return dict;
         }
+
 
         public static List<MeasurementsResult> GetMeasurementsResult()
         {
@@ -54,6 +56,7 @@ namespace ReserveChannelStoragesTests.Telemetry
             return results;
         }
 
+
         private static MeasurementsResult ToMeasurementsResult(string operationName, List<long> measurements) =>
             new MeasurementsResult
             {
@@ -62,9 +65,11 @@ namespace ReserveChannelStoragesTests.Telemetry
                 Median = measurements.Median(),
                 Max = measurements.Max(),
                 Min = measurements.Min(),
+                Percetile90 = measurements.Percentile(.90),
+                Percetile99 = measurements.Percentile(.99),
                 Count = measurements.Count,
                 TotalElapsed = measurements.Aggregate(TimeSpan.Zero,
-                    (span, milliseconds) => span.Add(TimeSpan.FromMilliseconds(milliseconds)))
+                                                      (span, milliseconds) => span.Add(TimeSpan.FromMilliseconds(milliseconds)))
             };
     }
 
@@ -78,10 +83,12 @@ namespace ReserveChannelStoragesTests.Telemetry
         public int Count { get; set; }
         public TimeSpan TotalElapsed { get; set; }
         public string OperationName { get; set; }
+        public double Percetile90 { get; set; }
+        public double Percetile99 { get; set; }
 
 
         public override string ToString() =>
-            $"OperationName: {OperationName} Average: {Average}, Median: {Median}, Max: {Max}, Min: {Min}, Count: {Count}, Total: {TotalElapsed}";
+            $"OperationName: {OperationName}, \n Average: {Average},\n Median: {Median},\n Max: {Max},\n Min: {Min},\n Percetile90: {this.Percetile90},\n Percetile99: {this.Percetile99},\n Count: {Count},\n Total: {TotalElapsed}";
     }
 
     public static class TelemetryExtensions
@@ -104,6 +111,24 @@ namespace ReserveChannelStoragesTests.Telemetry
             }
 
             return median;
+        }
+
+
+        public static double Percentile(this IList<long> sequence, double excelPercentile)
+        {
+            var arr = sequence.ToArray();
+            Array.Sort(arr);
+            var N = arr.Length;
+            var n = (N - 1) * excelPercentile + 1;
+            // Another method: double n = (N + 1) * excelPercentile;
+            if (n == 1d) return arr[0];
+            else if (n == N) return arr[N - 1];
+            else
+            {
+                int k = (int) n;
+                double d = n - k;
+                return arr[k - 1] + d * (arr[k] - arr[k - 1]);
+            }
         }
     }
 }

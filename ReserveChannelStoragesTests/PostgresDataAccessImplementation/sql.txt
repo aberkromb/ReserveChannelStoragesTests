@@ -10,7 +10,7 @@ create table reserve_channel_messages
 	message text not null,
 	exception text,
 	ttl int,
-	persistent bit not null,
+	persistent boolean not null,
 	column_12 int,
 	additional_headers varchar(255)
 );
