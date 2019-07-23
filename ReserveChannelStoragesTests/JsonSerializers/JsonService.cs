@@ -1,11 +1,11 @@
 using System;
-using ReserveChannelStoragesTests.JsonSerializers;
+using ReserveChannelStoragesTests.Json;
 
-namespace ReserveChannelStoragesTests.Json
+namespace ReserveChannelStoragesTests.JsonSerializers
 {
     public class JsonServiceFactory
     {
-        public IJsonService GetSerializer(string name)
+        public static IJsonService GetSerializer(string name)
         {
             switch (name.ToLower())
             {

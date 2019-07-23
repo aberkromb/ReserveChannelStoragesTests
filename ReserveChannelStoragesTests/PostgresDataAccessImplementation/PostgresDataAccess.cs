@@ -39,19 +39,19 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
 
             await OpenConnection();
             using var command = new NpgsqlCommand(commandText, this._connection);
-            command.Parameters.Add(new NpgsqlParameter<Guid>("@id", @object.DataObject.Id));
-            command.Parameters.Add(new NpgsqlParameter<DateTimeOffset>("@message_date", @object.DataObject.MessageDate));
-            command.Parameters.Add(new NpgsqlParameter<string>("@message_type", @object.DataObject.MessageType));
-            command.Parameters.Add(new NpgsqlParameter<string>("@additional_headers", @object.DataObject.AdditionalHeaders));
-            command.Parameters.Add(new NpgsqlParameter<string>("@application", @object.DataObject.Application));
-            command.Parameters.Add(new NpgsqlParameter<string>("@exception", @object.DataObject.Exception));
-            command.Parameters.Add(new NpgsqlParameter<string>("@exchange", @object.DataObject.Exchange));
-            command.Parameters.Add(new NpgsqlParameter<string>("@message", @object.DataObject.Message));
-            command.Parameters.Add(new NpgsqlParameter<string>("@message_routing_key", @object.DataObject.MessageRoutingKey));
-            command.Parameters.Add(new NpgsqlParameter<bool>("@persistent", @object.DataObject.Persistent));
-            command.Parameters.Add(new NpgsqlParameter<string>("@server", @object.DataObject.Server));
-            if (@object.DataObject.Ttl.HasValue)
-                command.Parameters.Add(new NpgsqlParameter<int>("@ttl", @object.DataObject.Ttl.Value));
+            command.Parameters.Add(new NpgsqlParameter<Guid>("@id", @object.Data.Id));
+            command.Parameters.Add(new NpgsqlParameter<DateTimeOffset>("@message_date", @object.Data.MessageDate));
+            command.Parameters.Add(new NpgsqlParameter<string>("@message_type", @object.Data.MessageType));
+            command.Parameters.Add(new NpgsqlParameter<string>("@additional_headers", @object.Data.AdditionalHeaders));
+            command.Parameters.Add(new NpgsqlParameter<string>("@application", @object.Data.Application));
+            command.Parameters.Add(new NpgsqlParameter<string>("@exception", @object.Data.Exception));
+            command.Parameters.Add(new NpgsqlParameter<string>("@exchange", @object.Data.Exchange));
+            command.Parameters.Add(new NpgsqlParameter<string>("@message", @object.Data.Message));
+            command.Parameters.Add(new NpgsqlParameter<string>("@message_routing_key", @object.Data.MessageRoutingKey));
+            command.Parameters.Add(new NpgsqlParameter<bool>("@persistent", @object.Data.Persistent));
+            command.Parameters.Add(new NpgsqlParameter<string>("@server", @object.Data.Server));
+            if (@object.Data.Ttl.HasValue)
+                command.Parameters.Add(new NpgsqlParameter<int>("@ttl", @object.Data.Ttl.Value));
 
             await command.ExecuteNonQueryAsync(token);
 
@@ -155,7 +155,7 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
         {
             var result = new PostgresDataObject();
 
-            result.DataObject = new MessageData
+            result.Data = new MessageData
                                 {
                                     Id = reader.GetGuid(0),
                                     MessageDate = reader.GetDateTime(1),

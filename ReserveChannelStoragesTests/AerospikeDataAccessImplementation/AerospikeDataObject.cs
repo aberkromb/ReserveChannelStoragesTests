@@ -2,7 +2,7 @@ using Generator;
 
 namespace ReserveChannelStoragesTests.AerospikeDataAccessImplementation
 {
-    public class AerospikeDataObject
+    public class AerospikeDataObject : DataObjectBase
     {
         /// <summary>
         ///     Имя наймспейса
@@ -18,10 +18,5 @@ namespace ReserveChannelStoragesTests.AerospikeDataAccessImplementation
         ///      Ключ в множестве
         /// </summary>
         public int? Key { get; set; }
-        
-        /// <summary>
-        ///     Непосредственно сохраняемое значение 
-        /// </summary>
-        public MessageData Data { get; set; }
     }
 }

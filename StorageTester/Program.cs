@@ -1,14 +1,13 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Aerospike.Client;
 using Generator;
-using Newtonsoft.Json;
 using ReserveChannelStoragesTests;
 using ReserveChannelStoragesTests.AerospikeDataAccessImplementation;
+using ReserveChannelStoragesTests.JsonSerializers;
+using ReserveChannelStoragesTests.KafkaDataAccessImplementation;
 using ReserveChannelStoragesTests.PostgresDataAccessImplementation;
 using static System.Console;
 using static ReserveChannelStoragesTests.Telemetry.TelemetryService;
@@ -19,7 +18,7 @@ namespace StorageTester
     {
         static async Task Main(string[] args)
         {
-            var messages = Generator.Generator.CreateRandomData(100);
+            var messages = Generator.Generator.CreateRandomData(5);
 
 //            File.WriteAllText("json.txt", JsonConvert.SerializeObject(messages));
 
@@ -27,7 +26,32 @@ namespace StorageTester
 
 //            await AerospikeTester(users);
 
-            await PostgresTester(messages);
+            await KafkaTester(messages);
+        }
+        
+        
+        private static async Task KafkaTester(List<MessageData> messages)
+        {
+            var dataAccess = new KafkaDataAccess(JsonServiceFactory.GetSerializer("newtonsoft"));
+
+            for (var i = 0; i < messages.Count; i++)
+            {
+                var message = messages[i];
+
+                var dataObj = new KafkaDataObject { Data = message };
+
+                await dataAccess.Add(dataObj, CancellationToken.None);
+
+//                var savedObject = await dataAccess.Get(dataObj.Data.Id, CancellationToken.None);
+
+//                await dataAccess.Delete(dataObj.Data.Id, CancellationToken.None);
+            }
+
+            var list = await dataAccess.GetAll(Unit.Value, CancellationToken.None);
+
+            WriteLine(list.Count);
+
+            GetMeasurementsResult().ForEach(WriteLine);
         }
 
 
@@ -39,13 +63,13 @@ namespace StorageTester
             {
                 var message = messages[i];
 
-                var dataObj = new PostgresDataObject { DataObject = message };
+                var dataObj = new PostgresDataObject { Data = message };
 
                 await dataAccess.Add(dataObj, CancellationToken.None);
 
-                var savedObject = await dataAccess.Get(dataObj.DataObject.Id, CancellationToken.None);
+                var savedObject = await dataAccess.Get(dataObj.Data.Id, CancellationToken.None);
 
-                await dataAccess.Delete(dataObj.DataObject.Id, CancellationToken.None);
+                await dataAccess.Delete(dataObj.Data.Id, CancellationToken.None);
             }
 
             var list = await dataAccess.GetAll(Guid.Empty, CancellationToken.None);
@@ -59,7 +83,7 @@ namespace StorageTester
         private static async Task AerospikeTester(List<MessageData> messages)
         {
 //            var asyncClient = new AsyncClient("localhost", 3000);
-            var binarySerializer = new ReserveChannelStoragesTests.BinarySerializers.ZeroFormatter();
+            var binarySerializer = new ReserveChannelStoragesTests.BinarySerializers.ZeroFormatterWrapper();
             var dataAccess = new AerospikeDataAccess(binarySerializer);
 
             for (var i = 0; i < messages.Count; i++)

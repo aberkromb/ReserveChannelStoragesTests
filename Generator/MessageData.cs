@@ -7,28 +7,28 @@ namespace Generator
     public class MessageData
     {
         [Index(0)]
-        public Guid Id { get; set; }
+        public virtual  Guid Id { get; set; }
         [Index(1)]
-        public string Server { get; set; }
+        public virtual  string Server { get; set; }
         [Index(2)]
-        public string Application { get; set; }
+        public virtual  string Application { get; set; }
         [Index(3)]
-        public string Exchange { get; set; }
+        public virtual  string Exchange { get; set; }
         [Index(4)]
-        public DateTimeOffset MessageDate { get; set; }
+        public virtual  DateTimeOffset MessageDate { get; set; }
         [Index(5)]
-        public string MessageType { get; set; }
+        public virtual  string MessageType { get; set; }
         [Index(6)]
-        public string MessageRoutingKey { get; set; }
+        public virtual  string MessageRoutingKey { get; set; }
         [Index(7)]
-        public string Message { get; set; }
+        public virtual  string Message { get; set; }
         [Index(8)]
-        public string Exception { get; set; }
+        public virtual  string Exception { get; set; }
         [Index(9)]
-        public int? Ttl { get; set; }
+        public virtual  int? Ttl { get; set; }
         [Index(10)]
-        public bool Persistent { get; set; }
+        public virtual  bool Persistent { get; set; }
         [Index(11)]
-        public string AdditionalHeaders { get; set; }
+        public virtual  string AdditionalHeaders { get; set; }
     }
 }

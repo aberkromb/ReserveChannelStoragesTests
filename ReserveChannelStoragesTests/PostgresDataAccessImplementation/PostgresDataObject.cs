@@ -2,8 +2,7 @@ using Generator;
 
 namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
 {
-    public class PostgresDataObject
+    public class PostgresDataObject : DataObjectBase
     {
-        public MessageData DataObject { get; set; }
     }
 }

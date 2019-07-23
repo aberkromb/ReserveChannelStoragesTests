@@ -2,7 +2,7 @@ using ZeroFormatter;
 
 namespace ReserveChannelStoragesTests.BinarySerializers
 {
-    public class ZeroFormatter : IBinarySerializer
+    public class ZeroFormatterWrapper : IBinarySerializer
     {
         public byte[] Serialize<T>(T obj) => ZeroFormatterSerializer.Serialize(obj);
 

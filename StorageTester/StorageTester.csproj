@@ -5,6 +5,14 @@
         <TargetFramework>netcoreapp3.0</TargetFramework>
     </PropertyGroup>
 
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+      <PlatformTarget>x64</PlatformTarget>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+      <PlatformTarget>x64</PlatformTarget>
+    </PropertyGroup>
+
     <ItemGroup>
       <ProjectReference Include="..\Generator\Generator.csproj" />
       <ProjectReference Include="..\ReserveChannelStoragesTests\ReserveChannelStoragesTests.csproj" />
