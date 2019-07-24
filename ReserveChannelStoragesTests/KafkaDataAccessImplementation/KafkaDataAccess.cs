@@ -15,7 +15,12 @@ namespace ReserveChannelStoragesTests.KafkaDataAccessImplementation
     public class KafkaDataAccess : IDataAccess<KafkaDataObject, Unit>, IDisposable
     {
         private ProducerConfig producerConfig = new ProducerConfig { BootstrapServers = "localhost:9092" };
-        private ConsumerConfig consumerConfig = new ConsumerConfig { GroupId = "test-consumer-group", BootstrapServers = "localhost:9092" , AutoOffsetReset = AutoOffsetReset.Earliest};
+
+        private ConsumerConfig consumerConfig = new ConsumerConfig
+                                                {
+                                                    GroupId = "test-consumer-group", BootstrapServers = "localhost:9092", AutoOffsetReset = AutoOffsetReset.Earliest,
+                                                    EnablePartitionEof = true
+                                                };
 
         private readonly IProducer<Null, string> producer;
         private readonly IConsumer<Null, string> consumer;
@@ -39,11 +44,13 @@ namespace ReserveChannelStoragesTests.KafkaDataAccessImplementation
 
         public async Task<Unit> Add(KafkaDataObject @object, CancellationToken token)
         {
-            Task<DeliveryResult<Null, string>> Func() => this.producer.ProduceAsync(topicName, new Message<Null, string> { Value = this.jsonService.Serialize(@object.Data) });
+            async Task<Unit> Func()
+            {
+                await this.producer.ProduceAsync(topicName, new Message<Null, string> { Value = this.jsonService.Serialize(@object.Data) });
+                return Unit.Value;
+            }
 
-            await MeasureIt(Func);
-
-            return Unit.Value;
+            return await MeasureIt(Func);
         }
 
 
@@ -66,26 +73,32 @@ namespace ReserveChannelStoragesTests.KafkaDataAccessImplementation
 
         public Task<List<KafkaDataObject>> GetAll(Unit key, CancellationToken token)
         {
+            Task<List<KafkaDataObject>> Func() => this.GetAllInternal();
+            return MeasureIt(Func);
+        }
+
+
+        private Task<List<KafkaDataObject>> GetAllInternal()
+        {
             var result = new List<KafkaDataObject>();
 
             this.consumer.Subscribe(topicName);
 
-            var isEnd = false;
-            while (!isEnd)
+            while (true)
             {
                 try
                 {
                     var consumeResult = this.consumer.Consume(TimeSpan.FromSeconds(1));
-                    
-                    if(consumeResult is null) continue;
 
-                    isEnd = consumeResult.IsPartitionEOF;
+                    if (consumeResult is null) continue;
+                    if (consumeResult.IsPartitionEOF) break;
+
                     result.Add(new KafkaDataObject { Data = this.jsonService.Deserialize<MessageData>(consumeResult.Value) });
                 }
                 catch (ConsumeException e)
                 {
                     Console.WriteLine(e);
-                    isEnd = true;
+                    break;
                 }
             }
 
