@@ -4,11 +4,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using Aerospike.Client;
 using Generator;
+using ProGaudi.Tarantool.Client;
 using ReserveChannelStoragesTests;
 using ReserveChannelStoragesTests.AerospikeDataAccessImplementation;
 using ReserveChannelStoragesTests.JsonSerializers;
 using ReserveChannelStoragesTests.KafkaDataAccessImplementation;
 using ReserveChannelStoragesTests.PostgresDataAccessImplementation;
+using ReserveChannelStoragesTests.TarantoolDataAccessImplementation;
 using static System.Console;
 using static ReserveChannelStoragesTests.Telemetry.TelemetryService;
 
@@ -22,11 +24,37 @@ namespace StorageTester
 
 //            File.WriteAllText("json.txt", JsonConvert.SerializeObject(messages));
 
-//            var box = await Box.Connect(Hostname, 3301);
+            
 
 //            await AerospikeTester(users);
+            await TarantoolTester(messages);
 
-            await KafkaTester(messages);
+//            await KafkaTester(messages);
+        }
+        
+        
+        private static async Task TarantoolTester(List<MessageData> messages)
+        {
+            var dataAccess = new TarantoolDataAccess(JsonServiceFactory.GetSerializer("newtonsoft"));
+
+            for (var i = 0; i < messages.Count; i++)
+            {
+                var message = messages[i];
+
+                var dataObj = new TarantoolDataObject { Data = message };
+
+                await dataAccess.Add(dataObj, CancellationToken.None);
+
+//                var savedObject = await dataAccess.Get(dataObj.Data.Id, CancellationToken.None);
+
+//                await dataAccess.Delete(dataObj.Data.Id, CancellationToken.None);
+            }
+
+//            var list = await dataAccess.GetAll(Guid.Empty, CancellationToken.None);
+
+//            WriteLine(list.Count);
+
+            GetMeasurementsResult().ForEach(WriteLine);
         }
         
         
