@@ -11,7 +11,7 @@ using static ReserveChannelStoragesTests.Telemetry.TelemetryService;
 namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
 {
     // docker run --name some-postgres -p 5432:5432 -e POSTGRES_USER=test_user -e POSTGRES_PASSWORD=tests -e POSTGRES_DB=RocksSqlMetalTestDatabase -d postgres
-    public class PostgresDataAccess : IDataAccess<PostgresDataObject, Guid>
+    public class PostgresDataAccess : IDataAccess<PostgresDataObject, Guid, Unit>
     {
         private static readonly string ConnectionString = "Host=localhost;Port=5432;Username=test_user;Password=tests;Database=postgres";
 
@@ -156,20 +156,20 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
             var result = new PostgresDataObject();
 
             result.Data = new MessageData
-                                {
-                                    Id = reader.GetGuid(0),
-                                    MessageDate = reader.GetDateTime(1),
-                                    MessageType = reader.GetString(2),
-                                    AdditionalHeaders = reader.GetString(3),
-                                    Application = reader.GetString(4),
-                                    Exception = reader.GetString(5),
-                                    Exchange = reader.GetString(6),
-                                    Message = reader.GetString(7),
-                                    MessageRoutingKey = reader.GetString(8),
-                                    Persistent = reader.GetBoolean(9),
-                                    Server = reader.GetString(10),
-                                    Ttl = reader.IsDBNull(11) ? (int?) null : reader.GetInt32(11)
-                                };
+                          {
+                              Id = reader.GetGuid(0),
+                              MessageDate = reader.GetDateTime(1),
+                              MessageType = reader.GetString(2),
+                              AdditionalHeaders = reader.GetString(3),
+                              Application = reader.GetString(4),
+                              Exception = reader.GetString(5),
+                              Exchange = reader.GetString(6),
+                              Message = reader.GetString(7),
+                              MessageRoutingKey = reader.GetString(8),
+                              Persistent = reader.GetBoolean(9),
+                              Server = reader.GetString(10),
+                              Ttl = reader.IsDBNull(11) ? (int?) null : reader.GetInt32(11)
+                          };
 
             return result;
         }

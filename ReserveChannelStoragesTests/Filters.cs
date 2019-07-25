@@ -3,10 +3,10 @@ using Generator;
 
 namespace ReserveChannelStoragesTests
 {
-    public class Condition
+    public class Filters
     {
         private static DateTime dt = DateTime.Now.AddDays(-15);
 
-        public static bool Predicate(MessageData data) => data.MessageDate < dt;
+        public static bool IsFiltersPassed(MessageData data) => data.MessageDate < dt;
     }
 }

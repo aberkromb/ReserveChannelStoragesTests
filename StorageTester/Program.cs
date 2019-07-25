@@ -4,7 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Aerospike.Client;
 using Generator;
-using ProGaudi.Tarantool.Client;
 using ReserveChannelStoragesTests;
 using ReserveChannelStoragesTests.AerospikeDataAccessImplementation;
 using ReserveChannelStoragesTests.JsonSerializers;
@@ -43,14 +42,16 @@ namespace StorageTester
 
                 var dataObj = new TarantoolDataObject { Data = message };
 
-                await dataAccess.Add(dataObj, CancellationToken.None);
+                var id  = await dataAccess.Add(dataObj, CancellationToken.None);
 
-//                var savedObject = await dataAccess.Get(dataObj.Data.Id, CancellationToken.None);
+                dataObj.Id = id;
 
-//                await dataAccess.Delete(dataObj.Data.Id, CancellationToken.None);
+                var savedObject = await dataAccess.Get(id, CancellationToken.None);
+
+                await dataAccess.Delete(id, CancellationToken.None);
             }
 
-//            var list = await dataAccess.GetAll(Guid.Empty, CancellationToken.None);
+            var list = await dataAccess.GetAll(-1L, CancellationToken.None);
 
 //            WriteLine(list.Count);
 

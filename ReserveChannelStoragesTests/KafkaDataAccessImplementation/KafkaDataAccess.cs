@@ -6,13 +6,13 @@ using Confluent.Kafka;
 using Generator;
 using ReserveChannelStoragesTests.BinarySerializers;
 using ReserveChannelStoragesTests.JsonSerializers;
-using static ReserveChannelStoragesTests.Condition;
+using static ReserveChannelStoragesTests.Filters;
 using static ReserveChannelStoragesTests.Telemetry.TelemetryService;
 
 namespace ReserveChannelStoragesTests.KafkaDataAccessImplementation
 {
     //docker run -p 2181:2181 -p 9092:9092 --env ADVERTISED_HOST=`docker-machine ip \`docker-machine active\`` --env ADVERTISED_PORT=9092 spotify/kafka
-    public class KafkaDataAccess : IDataAccess<KafkaDataObject, Unit>, IDisposable
+    public class KafkaDataAccess : IDataAccess<KafkaDataObject, Unit, Unit>, IDisposable
     {
         private ProducerConfig producerConfig = new ProducerConfig { BootstrapServers = "localhost:9092" };
 
@@ -128,7 +128,7 @@ namespace ReserveChannelStoragesTests.KafkaDataAccessImplementation
 
                     var data = this.jsonService.Deserialize<MessageData>(consumeResult.Value);
 
-                    if (Predicate(data))
+                    if (IsFiltersPassed(data))
                         result.Add(new KafkaDataObject { Data = data });
                 }
                 catch (ConsumeException e)

@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>netcoreapp3.0</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Generator\Generator.csproj" />
+      <ProjectReference Include="..\ReserveChannelStoragesTests\ReserveChannelStoragesTests.csproj" />
+      <ProjectReference Include="..\StorageTester\StorageTester.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Rocks.Dataflow" Version="2.4.0" />
+    </ItemGroup>
+
+</Project>

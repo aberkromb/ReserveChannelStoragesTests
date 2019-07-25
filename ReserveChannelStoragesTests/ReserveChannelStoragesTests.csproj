@@ -17,12 +17,12 @@
       <PackageReference Include="Confluent.Kafka" Version="1.1.0" />
       <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
       <PackageReference Include="Npgsql" Version="4.0.8" />
-      <PackageReference Include="progaudi.tarantool" Version="0.12.1" />
       <PackageReference Include="Utf8Json" Version="1.3.7" />
       <PackageReference Include="ZeroFormatter" Version="1.6.4" />
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\..\progaudi.tarantool\src\progaudi.tarantool\progaudi.tarantool.csproj" />
       <ProjectReference Include="..\Generator\Generator.csproj" />
     </ItemGroup>
 

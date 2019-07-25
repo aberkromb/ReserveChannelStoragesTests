@@ -4,12 +4,12 @@ using System.Threading.Tasks;
 
 namespace ReserveChannelStoragesTests
 {
-    public interface IDataAccess<TObj, in TKey>
+    public interface IDataAccess<TIn, in TKey, TAddOut>
     {
-        Task<Unit> Add(TObj @object, CancellationToken token);
-        Task<TObj> Get(TKey key, CancellationToken token);
-        Task<List<TObj>> GetAll(TKey key, CancellationToken token);
+        Task<TAddOut> Add(TIn @object, CancellationToken token);
+        Task<TIn> Get(TKey key, CancellationToken token);
+        Task<List<TIn>> GetAll(TKey key, CancellationToken token);
         Task<bool> Delete(TKey key, CancellationToken token);
-        Task<List<TObj>> GetAllByCondition(TKey key ,CancellationToken token);
+        Task<List<TIn>> GetAllByCondition(TKey key ,CancellationToken token);
     }
 }
