@@ -16,5 +16,11 @@ namespace ReserveChannelStoragesTests.KafkaDataAccessImplementation
         {
             throw new System.NotImplementedException();
         }
+
+
+        public Task<int> AmountRemaining(CancellationToken cancellationToken)
+        {
+            throw new System.NotImplementedException();
+        }
     }
 }

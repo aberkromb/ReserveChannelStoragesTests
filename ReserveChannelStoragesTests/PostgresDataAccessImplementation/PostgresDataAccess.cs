@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Data.Common;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Generator;
@@ -11,18 +11,11 @@ using static ReserveChannelStoragesTests.Telemetry.TelemetryService;
 
 namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
 {
-    // docker run --name some-postgres -p 5432:5432 -e POSTGRES_USER=test_user -e POSTGRES_PASSWORD=tests -e POSTGRES_DB=RocksSqlMetalTestDatabase -d postgres
+    // docker run --name some-postgres -p 5432:5432 -e POSTGRES_USER=test_user -e POSTGRES_PASSWORD=tests -d postgres
     public class PostgresDataAccess : IDataAccess<MessageData, Guid, Unit>
     {
-        private static readonly string ConnectionString = "Host=localhost;Port=5432;Username=test_user;Password=tests;Database=postgres";
-
-        private readonly NpgsqlConnection _connection;
-
-
-        public PostgresDataAccess()
-        {
-            this._connection = new NpgsqlConnection(ConnectionString);
-        }
+        private static readonly string ConnectionString =
+            "Host=localhost;Port=5432;Username=test_user;Password=tests;Database=postgres;Minimum Pool Size=200;Maximum Pool Size=1000";
 
 
         public Task<Unit> Add(MessageData @object, CancellationToken token)
@@ -38,8 +31,9 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
                 "INSERT INTO reserve_channel_messages (id, message_date, message_type, additional_headers, application, exception,exchange, message, message_routing_key, persistent, server, ttl)"
                 + "VALUES (@id, @message_date, @message_type, @additional_headers, @application, @exception, @exchange, @message, @message_routing_key, @persistent, @server, @ttl)";
 
-            await OpenConnection();
-            using var command = new NpgsqlCommand(commandText, this._connection);
+            using var connection = await this.CreateConnection();
+            using var command = connection.CreateCommand();
+            command.CommandText = commandText;
             command.Parameters.Add(new NpgsqlParameter<Guid>("@id", @object.Id));
             command.Parameters.Add(new NpgsqlParameter<DateTimeOffset>("@message_date", @object.MessageDate));
             command.Parameters.Add(new NpgsqlParameter<string>("@message_type", @object.MessageType));
@@ -72,8 +66,8 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
             var commandText =
                 "select id, message_date, message_type, additional_headers, application, exception,exchange, message, message_routing_key, persistent, server, ttl from reserve_channel_messages where id = @id";
 
-            await OpenConnection();
-            using var command = new NpgsqlCommand(commandText, this._connection);
+            using var connection = await this.CreateConnection();
+            using var command = new NpgsqlCommand(commandText, connection);
             command.Parameters.Add(new NpgsqlParameter<Guid>("@id", key));
 
             MessageData result = null;
@@ -100,8 +94,8 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
 
             List<MessageData> result = new List<MessageData>();
 
-            await OpenConnection();
-            using var command = new NpgsqlCommand(commandText, this._connection);
+            using var connection = await this.CreateConnection();
+            using var command = new NpgsqlCommand(commandText, connection);
             using var reader = await command.ExecuteReaderAsync(token);
             while (await reader.ReadAsync(token))
                 result.Add(ToDataObject(reader));
@@ -125,8 +119,8 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
 
             List<MessageData> result = new List<MessageData>();
 
-            await OpenConnection();
-            using var command = new NpgsqlCommand(commandText, this._connection);
+            using var connection = await this.CreateConnection();
+            using var command = new NpgsqlCommand(commandText, connection);
             using var reader = await command.ExecuteReaderAsync(token);
             while (await reader.ReadAsync(token))
                 result.Add(ToDataObject(reader));
@@ -146,8 +140,8 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
         {
             var commandText = "delete from reserve_channel_messages where id = @id";
 
-            await OpenConnection();
-            using var command = new NpgsqlCommand(commandText, this._connection);
+            using var connection = await this.CreateConnection();
+            using var command = new NpgsqlCommand(commandText, connection);
             command.Parameters.Add(new NpgsqlParameter<Guid>("@id", key));
 
             await command.ExecuteNonQueryAsync(token);
@@ -167,9 +161,9 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
         {
             var commandText = "delete from reserve_channel_messages where id = ANY(@ids)";
 
-            await this.OpenConnection();
-            using var command = new NpgsqlCommand(commandText, this._connection);
-            command.Parameters.Add("@ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid).Value = keys;
+            using var connection = await this.CreateConnection();
+            using var command = new NpgsqlCommand(commandText, connection);
+            command.Parameters.Add("@ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid).Value = keys.ToArray();
 
             await command.ExecuteNonQueryAsync(token);
 
@@ -188,8 +182,8 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
         {
             var commandText = "delete from reserve_channel_messages where message_date < @date";
 
-            await this.OpenConnection();
-            using var command = new NpgsqlCommand(commandText, this._connection);
+            using var connection = await this.CreateConnection();
+            using var command = new NpgsqlCommand(commandText, connection);
             command.Parameters.Add(new NpgsqlParameter<DateTime>("@date", DateTime.Now.AddDays(-15)));
 
             await command.ExecuteNonQueryAsync(token);
@@ -220,12 +214,11 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
         }
 
 
-        private Task OpenConnection()
+        private async Task<NpgsqlConnection> CreateConnection()
         {
-            if (this._connection.State != ConnectionState.Open)
-                return this._connection.OpenAsync();
-
-            return Task.CompletedTask;
+            var connection = new NpgsqlConnection(ConnectionString);
+            await connection.OpenAsync();
+            return connection;
         }
     }
 }

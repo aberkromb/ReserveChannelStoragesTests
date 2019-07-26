@@ -1,3 +1,5 @@
+using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,7 +20,17 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
         }
 
 
-        public Task Write(MessageData data, CancellationToken cancellationToken) => this._postgres.Add(data, cancellationToken);
+        public Task Write(MessageData data, CancellationToken cancellationToken)
+        {
+            var sw = Stopwatch.StartNew();
+
+            while (expression)
+            {
+                
+            }
+            
+            return this._postgres.Add(data, cancellationToken);
+        }
 
 
         public async Task Read(CancellationToken cancellationToken)
@@ -32,5 +44,8 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
                     break;
             }
         }
+
+
+        public async Task<int> AmountRemaining(CancellationToken cancellationToken) => (await this._postgres.GetAll(Guid.Empty, cancellationToken)).Count;
     }
 }

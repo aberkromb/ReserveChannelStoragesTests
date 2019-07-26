@@ -6,7 +6,6 @@ using Generator;
 using ReserveChannelStoragesTests;
 using ReserveChannelStoragesTests.AerospikeDataAccessImplementation;
 using ReserveChannelStoragesTests.BinarySerializers;
-using ReserveChannelStoragesTests.Json;
 using ReserveChannelStoragesTests.JsonSerializers;
 using ReserveChannelStoragesTests.KafkaDataAccessImplementation;
 using ReserveChannelStoragesTests.PostgresDataAccessImplementation;
@@ -22,23 +21,34 @@ namespace LoadRunner
         static async Task Main(string[] args)
         {
             Console.WriteLine("Starting...");
+            
             var sw = Stopwatch.StartNew();
-            var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+            var cts = new CancellationTokenSource(TimeSpan.FromMinutes(120));
 
-            var generateCount = 10;
+            var generateCount = 1_000_000;
 
             var messages = Generator.Generator.CreateRandomDataLazy(generateCount);
 
-            var dataflow = new LoaderBuilder()
-                           .WithJsonSerializer("newtonsoft")
-                           .WithScriptFor("postgres")
-                           .WithScriptConfig(new ScriptConfig())
-                           .WithLoaderConfig(new LoaderConfig())
-                           .Build(cts.Token);
+            try
+            {
+                var dataflow = new LoaderBuilder()
+                               .WithJsonSerializer("newtonsoft")
+                               .WithScriptFor("postgres")
+                               .WithScriptConfig(new ScriptConfig())
+                               .WithLoaderConfig(new LoaderConfig { ParallelsCount = 1 })
+                               .Build(cts.Token);
 
-            await dataflow.ProcessAsync(messages, cts.Token);
+                await dataflow.ProcessAsync(messages, cts.Token);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+            
+            TelemetryService.GetMeasurementsResult().ForEach(Console.WriteLine);
 
             sw.Stop();
+            
             Console.WriteLine($"End in {sw.Elapsed}");
         }
     }
@@ -109,20 +119,23 @@ namespace LoadRunner
 
         public Dataflow<MessageData> Build(CancellationToken cancellationToken)
         {
-            var loaderConfig = this.loaderConfig ?? new LoaderConfig();
-            var scriptConfig = this.scriptConfig ?? new ScriptConfig();
+            var lConfig = this.loaderConfig ?? new LoaderConfig();
+            var sConfig = this.scriptConfig ?? new ScriptConfig();
 
-            var script = this.CreateScript(this.storageName, this.jsonSerizlizerName, scriptConfig);
+            var script = this.CreateScript(this.storageName, this.jsonSerizlizerName, sConfig);
 
             var dataflow = DataflowFluent
                            .ReceiveDataOfType<MessageData>()
                            .ProcessAsync(data => script.Write(data, cancellationToken))
-                           .WithMaxDegreeOfParallelism(loaderConfig.ParallelsCount)
+                           .WithMaxDegreeOfParallelism(lConfig.ParallelsCount)
                            .ProcessAsync(data => script.Read(cancellationToken))
-                           .WithMaxDegreeOfParallelism(loaderConfig.ParallelsCount)
-                           .Action(x => TelemetryService.GetMeasurementsResult().ForEach(Console.WriteLine))
+                           .ProcessAsync(data => script.AmountRemaining(cancellationToken))
+                           .WithMaxDegreeOfParallelism(1)
+                           .WithDefaultExceptionLogger((exception, o) => Console.WriteLine(exception))
+                           .Action(x => { })
                            .CreateDataflow();
 
+            
             return dataflow;
         }
     }
