@@ -12,7 +12,7 @@ using static ReserveChannelStoragesTests.Telemetry.TelemetryService;
 namespace ReserveChannelStoragesTests.KafkaDataAccessImplementation
 {
     //docker run -p 2181:2181 -p 9092:9092 --env ADVERTISED_HOST=`docker-machine ip \`docker-machine active\`` --env ADVERTISED_PORT=9092 spotify/kafka
-    public class KafkaDataAccess : IDataAccess<KafkaDataObject, Unit, Unit>, IDisposable
+    public class KafkaDataAccess : IDataAccess<MessageData, Unit, Unit>, IDisposable
     {
         private ProducerConfig producerConfig = new ProducerConfig { BootstrapServers = "localhost:9092" };
 
@@ -42,11 +42,11 @@ namespace ReserveChannelStoragesTests.KafkaDataAccessImplementation
         }
 
 
-        public async Task<Unit> Add(KafkaDataObject @object, CancellationToken token)
+        public async Task<Unit> Add(MessageData @object, CancellationToken token)
         {
             async Task<Unit> Func()
             {
-                await this.producer.ProduceAsync(topicName, new Message<Null, string> { Value = this.jsonService.Serialize(@object.Data) });
+                await this.producer.ProduceAsync(topicName, new Message<Null, string> { Value = this.jsonService.Serialize(@object) });
                 return Unit.Value;
             }
 
@@ -54,13 +54,13 @@ namespace ReserveChannelStoragesTests.KafkaDataAccessImplementation
         }
 
 
-        public Task<KafkaDataObject> Get(Unit key, CancellationToken token)
+        public Task<MessageData> Get(Unit key, CancellationToken token)
         {
             this.consumer.Subscribe(topicName);
             try
             {
                 var consumeResult = this.consumer.Consume(token);
-                return Task.FromResult(new KafkaDataObject { Data = this.jsonService.Deserialize<MessageData>(consumeResult.Value) });
+                return Task.FromResult(this.jsonService.Deserialize<MessageData>(consumeResult.Value));
             }
             catch (ConsumeException e)
             {
@@ -71,16 +71,22 @@ namespace ReserveChannelStoragesTests.KafkaDataAccessImplementation
         }
 
 
-        public Task<List<KafkaDataObject>> GetAll(Unit key, CancellationToken token)
+        public Task<List<MessageData>> GetAll(Unit key, CancellationToken token)
         {
-            Task<List<KafkaDataObject>> Func() => this.GetAllInternal();
+            Task<List<MessageData>> Func() => this.GetAllInternal();
             return MeasureIt(Func);
         }
 
 
-        private Task<List<KafkaDataObject>> GetAllInternal()
+        public Task<List<MessageData>> GetBatch(int count, CancellationToken token)
         {
-            var result = new List<KafkaDataObject>();
+            throw new NotImplementedException();
+        }
+
+
+        private Task<List<MessageData>> GetAllInternal()
+        {
+            var result = new List<MessageData>();
 
             this.consumer.Subscribe(topicName);
 
@@ -93,7 +99,7 @@ namespace ReserveChannelStoragesTests.KafkaDataAccessImplementation
                     if (consumeResult is null) continue;
                     if (consumeResult.IsPartitionEOF) break;
 
-                    result.Add(new KafkaDataObject { Data = this.jsonService.Deserialize<MessageData>(consumeResult.Value) });
+                    result.Add(this.jsonService.Deserialize<MessageData>(consumeResult.Value) );
                 }
                 catch (ConsumeException e)
                 {
@@ -112,9 +118,15 @@ namespace ReserveChannelStoragesTests.KafkaDataAccessImplementation
         }
 
 
-        public Task<List<KafkaDataObject>> GetAllByCondition(Unit key, CancellationToken token)
+        public Task<bool> DeleteBatch(IEnumerable<Unit> keys, CancellationToken token)
         {
-            var result = new List<KafkaDataObject>();
+            throw new NotImplementedException();
+        }
+
+
+        public Task<List<MessageData>> GetAllByCondition(Unit key, CancellationToken token)
+        {
+            var result = new List<MessageData>();
 
             this.consumer.Subscribe(topicName);
 
@@ -129,7 +141,7 @@ namespace ReserveChannelStoragesTests.KafkaDataAccessImplementation
                     var data = this.jsonService.Deserialize<MessageData>(consumeResult.Value);
 
                     if (IsFiltersPassed(data))
-                        result.Add(new KafkaDataObject { Data = data });
+                        result.Add(data);
                 }
                 catch (ConsumeException e)
                 {

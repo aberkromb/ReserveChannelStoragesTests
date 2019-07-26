@@ -6,12 +6,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using Generator;
 using Npgsql;
+using NpgsqlTypes;
 using static ReserveChannelStoragesTests.Telemetry.TelemetryService;
 
 namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
 {
     // docker run --name some-postgres -p 5432:5432 -e POSTGRES_USER=test_user -e POSTGRES_PASSWORD=tests -e POSTGRES_DB=RocksSqlMetalTestDatabase -d postgres
-    public class PostgresDataAccess : IDataAccess<PostgresDataObject, Guid, Unit>
+    public class PostgresDataAccess : IDataAccess<MessageData, Guid, Unit>
     {
         private static readonly string ConnectionString = "Host=localhost;Port=5432;Username=test_user;Password=tests;Database=postgres";
 
@@ -24,14 +25,14 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
         }
 
 
-        public Task<Unit> Add(PostgresDataObject @object, CancellationToken token)
+        public Task<Unit> Add(MessageData @object, CancellationToken token)
         {
             Task<Unit> Func() => AddInternal(@object, token);
             return MeasureIt(Func);
         }
 
 
-        private async Task<Unit> AddInternal(PostgresDataObject @object, CancellationToken token)
+        private async Task<Unit> AddInternal(MessageData @object, CancellationToken token)
         {
             var commandText =
                 "INSERT INTO reserve_channel_messages (id, message_date, message_type, additional_headers, application, exception,exchange, message, message_routing_key, persistent, server, ttl)"
@@ -39,19 +40,19 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
 
             await OpenConnection();
             using var command = new NpgsqlCommand(commandText, this._connection);
-            command.Parameters.Add(new NpgsqlParameter<Guid>("@id", @object.Data.Id));
-            command.Parameters.Add(new NpgsqlParameter<DateTimeOffset>("@message_date", @object.Data.MessageDate));
-            command.Parameters.Add(new NpgsqlParameter<string>("@message_type", @object.Data.MessageType));
-            command.Parameters.Add(new NpgsqlParameter<string>("@additional_headers", @object.Data.AdditionalHeaders));
-            command.Parameters.Add(new NpgsqlParameter<string>("@application", @object.Data.Application));
-            command.Parameters.Add(new NpgsqlParameter<string>("@exception", @object.Data.Exception));
-            command.Parameters.Add(new NpgsqlParameter<string>("@exchange", @object.Data.Exchange));
-            command.Parameters.Add(new NpgsqlParameter<string>("@message", @object.Data.Message));
-            command.Parameters.Add(new NpgsqlParameter<string>("@message_routing_key", @object.Data.MessageRoutingKey));
-            command.Parameters.Add(new NpgsqlParameter<bool>("@persistent", @object.Data.Persistent));
-            command.Parameters.Add(new NpgsqlParameter<string>("@server", @object.Data.Server));
-            if (@object.Data.Ttl.HasValue)
-                command.Parameters.Add(new NpgsqlParameter<int>("@ttl", @object.Data.Ttl.Value));
+            command.Parameters.Add(new NpgsqlParameter<Guid>("@id", @object.Id));
+            command.Parameters.Add(new NpgsqlParameter<DateTimeOffset>("@message_date", @object.MessageDate));
+            command.Parameters.Add(new NpgsqlParameter<string>("@message_type", @object.MessageType));
+            command.Parameters.Add(new NpgsqlParameter<string>("@additional_headers", @object.AdditionalHeaders));
+            command.Parameters.Add(new NpgsqlParameter<string>("@application", @object.Application));
+            command.Parameters.Add(new NpgsqlParameter<string>("@exception", @object.Exception));
+            command.Parameters.Add(new NpgsqlParameter<string>("@exchange", @object.Exchange));
+            command.Parameters.Add(new NpgsqlParameter<string>("@message", @object.Message));
+            command.Parameters.Add(new NpgsqlParameter<string>("@message_routing_key", @object.MessageRoutingKey));
+            command.Parameters.Add(new NpgsqlParameter<bool>("@persistent", @object.Persistent));
+            command.Parameters.Add(new NpgsqlParameter<string>("@server", @object.Server));
+            if (@object.Ttl.HasValue)
+                command.Parameters.Add(new NpgsqlParameter<int>("@ttl", @object.Ttl.Value));
 
             await command.ExecuteNonQueryAsync(token);
 
@@ -59,14 +60,14 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
         }
 
 
-        public Task<PostgresDataObject> Get(Guid key, CancellationToken token)
+        public Task<MessageData> Get(Guid key, CancellationToken token)
         {
-            Task<PostgresDataObject> Func() => GetInternal(key, token);
+            Task<MessageData> Func() => GetInternal(key, token);
             return MeasureIt(Func);
         }
 
 
-        private async Task<PostgresDataObject> GetInternal(Guid key, CancellationToken token)
+        private async Task<MessageData> GetInternal(Guid key, CancellationToken token)
         {
             var commandText =
                 "select id, message_date, message_type, additional_headers, application, exception,exchange, message, message_routing_key, persistent, server, ttl from reserve_channel_messages where id = @id";
@@ -75,7 +76,7 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
             using var command = new NpgsqlCommand(commandText, this._connection);
             command.Parameters.Add(new NpgsqlParameter<Guid>("@id", key));
 
-            PostgresDataObject result = null;
+            MessageData result = null;
 
             using var reader = await command.ExecuteReaderAsync(token);
             if (await reader.ReadAsync(token))
@@ -85,19 +86,44 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
         }
 
 
-        public Task<List<PostgresDataObject>> GetAll(Guid key, CancellationToken token)
+        public Task<List<MessageData>> GetAll(Guid key, CancellationToken token)
         {
-            Task<List<PostgresDataObject>> Func() => GetAllInternal(token);
+            Task<List<MessageData>> Func() => GetAllInternal(token);
             return MeasureIt(Func);
         }
 
 
-        private async Task<List<PostgresDataObject>> GetAllInternal(CancellationToken token)
+        private async Task<List<MessageData>> GetAllInternal(CancellationToken token)
         {
             var commandText =
                 "select id, message_date, message_type, additional_headers, application, exception,exchange, message, message_routing_key, persistent, server, ttl from reserve_channel_messages";
 
-            List<PostgresDataObject> result = new List<PostgresDataObject>();
+            List<MessageData> result = new List<MessageData>();
+
+            await OpenConnection();
+            using var command = new NpgsqlCommand(commandText, this._connection);
+            using var reader = await command.ExecuteReaderAsync(token);
+            while (await reader.ReadAsync(token))
+                result.Add(ToDataObject(reader));
+
+            return result;
+        }
+
+
+        public Task<List<MessageData>> GetBatch(int count, CancellationToken token)
+        {
+            Task<List<MessageData>> Func() => GetBatchInternal(count, token);
+            return MeasureIt(Func);
+        }
+
+
+        private async Task<List<MessageData>> GetBatchInternal(int count, CancellationToken token)
+        {
+            var commandText =
+                "select id, message_date, message_type, additional_headers, application, exception,exchange, message, message_routing_key, persistent, server, ttl from reserve_channel_messages limit " +
+                count;
+
+            List<MessageData> result = new List<MessageData>();
 
             await OpenConnection();
             using var command = new NpgsqlCommand(commandText, this._connection);
@@ -130,14 +156,35 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
         }
 
 
-        public Task<List<PostgresDataObject>> GetAllByCondition(Guid key, CancellationToken token)
+        public Task<bool> DeleteBatch(IEnumerable<Guid> keys, CancellationToken token)
         {
-            Task<List<PostgresDataObject>> Func() => GetAllByConditionInternal(token);
+            Task<bool> Func() => this.DeleteBatchInternal(keys, token);
             return MeasureIt(Func);
         }
 
 
-        private async Task<List<PostgresDataObject>> GetAllByConditionInternal(CancellationToken token)
+        private async Task<bool> DeleteBatchInternal(IEnumerable<Guid> keys, CancellationToken token)
+        {
+            var commandText = "delete from reserve_channel_messages where id = ANY(@ids)";
+
+            await this.OpenConnection();
+            using var command = new NpgsqlCommand(commandText, this._connection);
+            command.Parameters.Add("@ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid).Value = keys;
+
+            await command.ExecuteNonQueryAsync(token);
+
+            return true;
+        }
+
+
+        public Task<List<MessageData>> GetAllByCondition(Guid key, CancellationToken token)
+        {
+            Task<List<MessageData>> Func() => GetAllByConditionInternal(token);
+            return MeasureIt(Func);
+        }
+
+
+        private async Task<List<MessageData>> GetAllByConditionInternal(CancellationToken token)
         {
             var commandText = "delete from reserve_channel_messages where message_date < @date";
 
@@ -151,25 +198,23 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
         }
 
 
-        private static PostgresDataObject ToDataObject(DbDataReader reader)
+        private static MessageData ToDataObject(DbDataReader reader)
         {
-            var result = new PostgresDataObject();
-
-            result.Data = new MessageData
-                          {
-                              Id = reader.GetGuid(0),
-                              MessageDate = reader.GetDateTime(1),
-                              MessageType = reader.GetString(2),
-                              AdditionalHeaders = reader.GetString(3),
-                              Application = reader.GetString(4),
-                              Exception = reader.GetString(5),
-                              Exchange = reader.GetString(6),
-                              Message = reader.GetString(7),
-                              MessageRoutingKey = reader.GetString(8),
-                              Persistent = reader.GetBoolean(9),
-                              Server = reader.GetString(10),
-                              Ttl = reader.IsDBNull(11) ? (int?) null : reader.GetInt32(11)
-                          };
+            var result = new MessageData
+                         {
+                             Id = reader.GetGuid(0),
+                             MessageDate = reader.GetDateTime(1),
+                             MessageType = reader.GetString(2),
+                             AdditionalHeaders = reader.GetString(3),
+                             Application = reader.GetString(4),
+                             Exception = reader.GetString(5),
+                             Exchange = reader.GetString(6),
+                             Message = reader.GetString(7),
+                             MessageRoutingKey = reader.GetString(8),
+                             Persistent = reader.GetBoolean(9),
+                             Server = reader.GetString(10),
+                             Ttl = reader.IsDBNull(11) ? (int?) null : reader.GetInt32(11)
+                         };
 
             return result;
         }

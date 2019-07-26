@@ -23,15 +23,14 @@ namespace StorageTester
 
 //            File.WriteAllText("json.txt", JsonConvert.SerializeObject(messages));
 
-            
 
 //            await AerospikeTester(users);
             await TarantoolTester(messages);
 
 //            await KafkaTester(messages);
         }
-        
-        
+
+
         private static async Task TarantoolTester(List<MessageData> messages)
         {
             var dataAccess = new TarantoolDataAccess(JsonServiceFactory.GetSerializer("newtonsoft"));
@@ -40,11 +39,7 @@ namespace StorageTester
             {
                 var message = messages[i];
 
-                var dataObj = new TarantoolDataObject { Data = message };
-
-                var id  = await dataAccess.Add(dataObj, CancellationToken.None);
-
-                dataObj.Id = id;
+                var id = await dataAccess.Add(message, CancellationToken.None);
 
                 var savedObject = await dataAccess.Get(id, CancellationToken.None);
 
@@ -57,8 +52,8 @@ namespace StorageTester
 
             GetMeasurementsResult().ForEach(WriteLine);
         }
-        
-        
+
+
         private static async Task KafkaTester(List<MessageData> messages)
         {
             var dataAccess = new KafkaDataAccess(JsonServiceFactory.GetSerializer("newtonsoft"));
@@ -67,9 +62,7 @@ namespace StorageTester
             {
                 var message = messages[i];
 
-                var dataObj = new KafkaDataObject { Data = message };
-
-                await dataAccess.Add(dataObj, CancellationToken.None);
+                await dataAccess.Add(message, CancellationToken.None);
 
 //                var savedObject = await dataAccess.Get(dataObj.Data.Id, CancellationToken.None);
 
@@ -92,13 +85,11 @@ namespace StorageTester
             {
                 var message = messages[i];
 
-                var dataObj = new PostgresDataObject { Data = message };
+                await dataAccess.Add(message, CancellationToken.None);
 
-                await dataAccess.Add(dataObj, CancellationToken.None);
+                var savedObject = await dataAccess.Get(message.Id, CancellationToken.None);
 
-                var savedObject = await dataAccess.Get(dataObj.Data.Id, CancellationToken.None);
-
-                await dataAccess.Delete(dataObj.Data.Id, CancellationToken.None);
+                await dataAccess.Delete(message.Id, CancellationToken.None);
             }
 
             var list = await dataAccess.GetAll(Guid.Empty, CancellationToken.None);
@@ -117,19 +108,11 @@ namespace StorageTester
 
             for (var i = 0; i < messages.Count; i++)
             {
-                var messageData = messages[i];
+                var message = messages[i];
                 var ns = "reserve_channel";
                 var setName = "messages";
 
-                var dataObj = new AerospikeDataObject
-                              {
-                                  Key = i,
-                                  Namespace = ns,
-                                  SetName = setName,
-                                  Data = messageData
-                              };
-
-                await dataAccess.Add(dataObj, CancellationToken.None);
+                await dataAccess.Add(message, CancellationToken.None);
 
                 var dataObject = await dataAccess.Get(new Key(ns, setName, i), CancellationToken.None);
 

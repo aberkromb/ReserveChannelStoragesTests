@@ -14,12 +14,12 @@ using static ReserveChannelStoragesTests.Telemetry.TelemetryService;
 
 namespace ReserveChannelStoragesTests.TarantoolDataAccessImplementation
 {
-//    docker run --name mytarantool -p 3301:3301 -d tarantool/tarantool
+//  docker run --name mytarantool -p 3301:3301 -d tarantool/tarantool
 // docker exec -i -t mytarantool console
 // s = box.schema.space.create('reservechannel', {id = 999, field_count = 2, engine = 'vinyl', format = {{name='id', type = 'integer'}, {name='data', type='string'}} })
 // seq = box.schema.sequence.create('seq')
 // s:create_index('Q',{sequence='seq'})
-    public class TarantoolDataAccess : IDataAccess<TarantoolDataObject, long, long>
+    public class TarantoolDataAccess : IDataAccess<MessageData, long, long>
     {
         private readonly Box _box;
         private readonly ISpace _space;
@@ -34,11 +34,11 @@ namespace ReserveChannelStoragesTests.TarantoolDataAccessImplementation
         }
 
 
-        public Task<long> Add(TarantoolDataObject @object, CancellationToken token)
+        public Task<long> Add(MessageData @object, CancellationToken token)
         {
             async Task<long> Func()
             {
-                var response = await this._space.Insert(TarantoolTuple.Create((long?) null, this._jsonService.Serialize(@object.Data)));
+                var response = await this._space.Insert(TarantoolTuple.Create((long?) null, this._jsonService.Serialize(@object)));
                 var x = response.Data[0].Item1;
                 return x.Value;
             }
@@ -47,35 +47,41 @@ namespace ReserveChannelStoragesTests.TarantoolDataAccessImplementation
         }
 
 
-        public Task<TarantoolDataObject> Get(long key, CancellationToken token)
+        public Task<MessageData> Get(long key, CancellationToken token)
         {
-            Task<TarantoolDataObject> Func() => GetInternal(key);
+            Task<MessageData> Func() => GetInternal(key);
             return MeasureIt(Func);
         }
 
 
-        private async Task<TarantoolDataObject> GetInternal(long key)
+        private async Task<MessageData> GetInternal(long key)
         {
             var result = await this._space.Get<ValueTuple<long>, ValueTuple<long, string>>(ValueTuple.Create(key));
-            return new TarantoolDataObject { Data = this._jsonService.Deserialize<MessageData>(result.Item2) };
+            return this._jsonService.Deserialize<MessageData>(result.Item2);
         }
 
 
-        public Task<List<TarantoolDataObject>> GetAll(long key, CancellationToken token)
+        public Task<List<MessageData>> GetAll(long key, CancellationToken token)
         {
-            Task<List<TarantoolDataObject>> Func() => this.GetAllInternal();
+            Task<List<MessageData>> Func() => this.GetAllInternal();
             return MeasureIt(Func);
         }
 
 
-        private async Task<List<TarantoolDataObject>> GetAllInternal()
+        public Task<List<MessageData>> GetBatch(int count, CancellationToken token)
+        {
+            throw new NotImplementedException();
+        }
+
+
+        private async Task<List<MessageData>> GetAllInternal()
         {
             var response = await this._space["Q"].Select<ValueTuple<long>, ValueTuple<long, string>>(ValueTuple.Create(-1L), new SelectOptions { Iterator = Iterator.All });
 
-            var result = response.Data.Aggregate(new List<TarantoolDataObject>(response.Data.Length),
+            var result = response.Data.Aggregate(new List<MessageData>(response.Data.Length),
                                                  (list, s) =>
                                                  {
-                                                     list.Add(new TarantoolDataObject { Data = this._jsonService.Deserialize<MessageData>(s.Item2) });
+                                                     list.Add(this._jsonService.Deserialize<MessageData>(s.Item2));
                                                      return list;
                                                  });
             return result;
@@ -93,24 +99,30 @@ namespace ReserveChannelStoragesTests.TarantoolDataAccessImplementation
         }
 
 
-        public Task<List<TarantoolDataObject>> GetAllByCondition(long _, CancellationToken token)
+        public Task<bool> DeleteBatch(IEnumerable<long> keys, CancellationToken token)
         {
-            Task<List<TarantoolDataObject>> Func() => this.GetAllByConditionInternal();
+            throw new NotImplementedException();
+        }
+
+
+        public Task<List<MessageData>> GetAllByCondition(long _, CancellationToken token)
+        {
+            Task<List<MessageData>> Func() => this.GetAllByConditionInternal();
 
             return MeasureIt(Func);
         }
 
 
-        private async Task<List<TarantoolDataObject>> GetAllByConditionInternal()
+        private async Task<List<MessageData>> GetAllByConditionInternal()
         {
             var response = await this._space["Q"].Select<long, string>(-1L, new SelectOptions { Iterator = Iterator.All });
 
-            var result = response.Data.Aggregate(new List<TarantoolDataObject>(response.Data.Length),
+            var result = response.Data.Aggregate(new List<MessageData>(response.Data.Length),
                                                  (list, s) =>
                                                  {
                                                      var obj = this._jsonService.Deserialize<MessageData>(s);
                                                      if (IsFiltersPassed(obj))
-                                                         list.Add(new TarantoolDataObject { Data = obj });
+                                                         list.Add(obj);
                                                      return list;
                                                  });
 
