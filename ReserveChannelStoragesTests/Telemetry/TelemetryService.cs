@@ -48,9 +48,9 @@ namespace ReserveChannelStoragesTests.Telemetry
 
             var results = new List<MeasurementsResult>(dict.Keys.Count);
 
-            foreach (var (opName, measurements) in dict)
+            foreach (var (operationName, measurements) in dict)
             {
-                results.Add(ToMeasurementsResult(opName, measurements));
+                results.Add(ToMeasurementsResult(operationName, measurements));
             }
 
             return results;

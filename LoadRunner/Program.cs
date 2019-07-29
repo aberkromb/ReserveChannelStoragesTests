@@ -21,7 +21,7 @@ namespace LoadRunner
         static async Task Main(string[] args)
         {
             Console.WriteLine("Starting...");
-            
+
             var sw = Stopwatch.StartNew();
             var cts = new CancellationTokenSource(TimeSpan.FromMinutes(120));
 
@@ -34,21 +34,21 @@ namespace LoadRunner
                 var dataflow = new LoaderBuilder()
                                .WithJsonSerializer("newtonsoft")
                                .WithScriptFor("postgres")
-                               .WithScriptConfig(new ScriptConfig())
+                               .WithScriptConfig(new ScriptConfig() { TimeToWrite = TimeSpan.FromMinutes(1) })
                                .WithLoaderConfig(new LoaderConfig { ParallelsCount = 1 })
                                .Build(cts.Token);
 
-                await dataflow.ProcessAsync(messages, cts.Token);
+                await dataflow.Run(messages, cts.Token);
             }
             catch (Exception e)
             {
                 Console.WriteLine(e);
             }
-            
+
             TelemetryService.GetMeasurementsResult().ForEach(Console.WriteLine);
 
             sw.Stop();
-            
+
             Console.WriteLine($"End in {sw.Elapsed}");
         }
     }
@@ -95,7 +95,17 @@ namespace LoadRunner
         }
 
 
-        private IScript CreateScript(string name, string jsonSerializerName, ScriptConfig scriptConfig)
+        public IScript Build(CancellationToken cancellationToken)
+        {
+            var config = this.scriptConfig ?? new ScriptConfig();
+
+            var script = this.CreateScript(this.storageName, this.jsonSerizlizerName, config);
+
+            return script;
+        }
+
+
+        private IScript CreateScript(string name, string jsonSerializerName, ScriptConfig config)
         {
             switch (name)
             {
@@ -104,7 +114,7 @@ namespace LoadRunner
                     return new AerospikeSimpleWriteRead();
                 case "postgres":
                     var postgres = new PostgresDataAccess();
-                    return new PostgresSimpleWriteRead(postgres, scriptConfig);
+                    return new PostgresSimpleWriteRead(postgres, config);
                 case "kafka":
                     var kafka = new KafkaDataAccess(JsonServiceFactory.GetSerializer(jsonSerializerName ?? "newtonsoft"));
                     return new KafkaSimpleWriteRead();
@@ -114,29 +124,6 @@ namespace LoadRunner
                 default:
                     throw new NotSupportedException();
             }
-        }
-
-
-        public Dataflow<MessageData> Build(CancellationToken cancellationToken)
-        {
-            var lConfig = this.loaderConfig ?? new LoaderConfig();
-            var sConfig = this.scriptConfig ?? new ScriptConfig();
-
-            var script = this.CreateScript(this.storageName, this.jsonSerizlizerName, sConfig);
-
-            var dataflow = DataflowFluent
-                           .ReceiveDataOfType<MessageData>()
-                           .ProcessAsync(data => script.Write(data, cancellationToken))
-                           .WithMaxDegreeOfParallelism(lConfig.ParallelsCount)
-                           .ProcessAsync(data => script.Read(cancellationToken))
-                           .ProcessAsync(data => script.AmountRemaining(cancellationToken))
-                           .WithMaxDegreeOfParallelism(1)
-                           .WithDefaultExceptionLogger((exception, o) => Console.WriteLine(exception))
-                           .Action(x => { })
-                           .CreateDataflow();
-
-            
-            return dataflow;
         }
     }
 
