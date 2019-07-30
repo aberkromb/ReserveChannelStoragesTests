@@ -11,6 +11,8 @@ using static ReserveChannelStoragesTests.Telemetry.TelemetryService;
 
 namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
 {
+    //docker run --name some-postgres -p 5432:5432 -e POSTGRES_USER=test_user -e POSTGRES_PASSWORD=tests -d -v pgdata:/D/pg  postgres
+    
     // docker run --name some-postgres -p 5432:5432 -e POSTGRES_USER=test_user -e POSTGRES_PASSWORD=tests -d postgres
     public class PostgresDataAccess : IDataAccess<MessageData, Guid, Unit>
     {

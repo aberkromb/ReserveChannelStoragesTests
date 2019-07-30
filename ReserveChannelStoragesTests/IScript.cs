@@ -7,6 +7,6 @@ namespace ReserveChannelStoragesTests
 {
     public interface IScript
     {
-        Task Run(IEnumerable<MessageData> messageDatas, CancellationToken cancellationToken);
+        Task Run(IEnumerable<MessageData> messages, CancellationToken cancellationToken);
     }
 }

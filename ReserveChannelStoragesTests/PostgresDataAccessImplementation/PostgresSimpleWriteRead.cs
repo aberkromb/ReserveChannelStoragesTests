@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,33 +8,53 @@ using Rocks.Dataflow.Fluent;
 
 namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
 {
-    public class PostgresSimpleWriteRead : ScriptBase
+    public class PostgresSimpleWriteRead : IScript
     {
         private PostgresDataAccess _postgres;
         private ScriptConfig _config;
 
 
-        public PostgresSimpleWriteRead(PostgresDataAccess postgres, ScriptConfig config) : base(new Stopwatch(), false)
+        public PostgresSimpleWriteRead(PostgresDataAccess postgres, ScriptConfig config)
         {
             this._postgres = postgres;
             this._config = config;
         }
 
 
-        public override async Task Run(IEnumerable<MessageData> datas, CancellationToken cancellationToken)
+        public async Task Run(IEnumerable<MessageData> messages, CancellationToken cancellationToken)
         {
+            Console.WriteLine($"Script running...{Helpers.DateTime}");
+
             var writeCts = new CancellationTokenSource(this._config.TimeToWrite);
             var readCts = new CancellationTokenSource(this._config.TimeToRead);
 
-            await Write(datas, writeCts.Token);
-            await Read(readCts.Token);
+            Task Write() => this.Write(messages, writeCts.Token);
+            await Try(Write);
+            
+            Task Read() => this.Read(readCts.Token);
+            await Try(Read);
+
             Console.WriteLine(await this.AmountRemaining(cancellationToken));
+            Console.WriteLine($"Script ending...{Helpers.DateTime}");
         }
 
 
-        protected override Task Write(IEnumerable<MessageData> datas, CancellationToken cancellationToken)
+        private static async Task Try(Func<Task> func)
         {
-            Console.WriteLine($"Start writing... {DateTime.Now}");
+            try
+            {
+                await func();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+        }
+
+
+        private Task Write(IEnumerable<MessageData> messages, CancellationToken cancellationToken)
+        {
+            Console.WriteLine($"Start writing... {Helpers.DateTime}");
             var dataflow = DataflowFluent
                            .ReceiveDataOfType<MessageData>()
                            .ProcessAsync(data => this._postgres.Add(data, CancellationToken.None))
@@ -46,13 +65,13 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
                                    })
                            .CreateDataflow();
 
-            return dataflow.ProcessAsync(datas, cancellationToken);
+            return dataflow.ProcessAsync(messages, cancellationToken);
         }
 
 
-        protected override async Task Read(CancellationToken cancellationToken)
+        private async Task Read(CancellationToken cancellationToken)
         {
-            Console.WriteLine($"Start reading... {DateTime.Now}");
+            Console.WriteLine($"Start reading... {Helpers.DateTime}");
             while (!cancellationToken.IsCancellationRequested)
             {
                 var batch = await this._postgres.GetBatch(this._config.BatchSize, cancellationToken);
@@ -64,6 +83,6 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
         }
 
 
-        protected override async Task<int> AmountRemaining(CancellationToken cancellationToken) => (await this._postgres.GetAll(Guid.Empty, cancellationToken)).Count;
+        private async Task<int> AmountRemaining(CancellationToken cancellationToken) => (await this._postgres.GetAll(Guid.Empty, cancellationToken)).Count;
     }
 }

@@ -2,15 +2,17 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 
 namespace ReserveChannelStoragesTests.Telemetry
 {
     public static class TelemetryService
     {
-        private static ConcurrentBag<(string, long)> measurements = new ConcurrentBag<(string, long)>();
+        private static ConcurrentBag<(string, long)> _measurements = new ConcurrentBag<(string, long)>();
 
 
         public static async Task<TOut> MeasureIt<TOut>(Func<Task<TOut>> func, [CallerMemberName] string caller = "")
@@ -20,7 +22,7 @@ namespace ReserveChannelStoragesTests.Telemetry
             var functionResult = await func();
 
             sw.Stop();
-            measurements.Add((caller, sw.ElapsedMilliseconds));
+            _measurements.Add((caller, sw.ElapsedMilliseconds));
 
             return functionResult;
         }
@@ -30,7 +32,7 @@ namespace ReserveChannelStoragesTests.Telemetry
         {
             var dict = new Dictionary<string, List<long>>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var (callerName, time) in measurements)
+            foreach (var (callerName, time) in _measurements)
             {
                 if (dict.ContainsKey(callerName))
                     dict[callerName].Add(time);
@@ -42,6 +44,15 @@ namespace ReserveChannelStoragesTests.Telemetry
         }
 
 
+        public static void DumpRawData()
+        {
+            var fileName = "RawMeasurements_" + DateTime.Now.ToString("yyyyMMddHHmmss");
+
+            foreach (var measurement in _measurements)
+                File.AppendAllText(fileName, JsonConvert.SerializeObject(measurement));
+        }
+
+
         public static List<MeasurementsResult> GetMeasurementsResult()
         {
             var dict = ToDictionary();
@@ -49,9 +60,7 @@ namespace ReserveChannelStoragesTests.Telemetry
             var results = new List<MeasurementsResult>(dict.Keys.Count);
 
             foreach (var (operationName, measurements) in dict)
-            {
                 results.Add(ToMeasurementsResult(operationName, measurements));
-            }
 
             return results;
         }

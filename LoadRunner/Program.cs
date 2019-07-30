@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Generator;
 using ReserveChannelStoragesTests;
 using ReserveChannelStoragesTests.AerospikeDataAccessImplementation;
 using ReserveChannelStoragesTests.BinarySerializers;
@@ -11,8 +10,7 @@ using ReserveChannelStoragesTests.KafkaDataAccessImplementation;
 using ReserveChannelStoragesTests.PostgresDataAccessImplementation;
 using ReserveChannelStoragesTests.TarantoolDataAccessImplementation;
 using ReserveChannelStoragesTests.Telemetry;
-using Rocks.Dataflow;
-using Rocks.Dataflow.Fluent;
+using static Generator.Generator;
 
 namespace LoadRunner
 {
@@ -23,22 +21,21 @@ namespace LoadRunner
             Console.WriteLine("Starting...");
 
             var sw = Stopwatch.StartNew();
-            var cts = new CancellationTokenSource(TimeSpan.FromMinutes(120));
 
             var generateCount = 1_000_000;
 
-            var messages = Generator.Generator.CreateRandomDataLazy(generateCount);
+            var messages = CreateRandomDataLazy(generateCount);
 
             try
             {
                 var dataflow = new LoaderBuilder()
                                .WithJsonSerializer("newtonsoft")
                                .WithScriptFor("postgres")
-                               .WithScriptConfig(new ScriptConfig() { TimeToWrite = TimeSpan.FromMinutes(1) })
+                               .WithScriptConfig(new ScriptConfig { TimeToWrite = TimeSpan.FromMinutes(1) })
                                .WithLoaderConfig(new LoaderConfig { ParallelsCount = 1 })
-                               .Build(cts.Token);
+                               .Build(CancellationToken.None);
 
-                await dataflow.Run(messages, cts.Token);
+                await dataflow.Run(messages, CancellationToken.None);
             }
             catch (Exception e)
             {
@@ -46,12 +43,15 @@ namespace LoadRunner
             }
 
             TelemetryService.GetMeasurementsResult().ForEach(Console.WriteLine);
+            TelemetryService.DumpRawData();
 
             sw.Stop();
 
             Console.WriteLine($"End in {sw.Elapsed}");
         }
     }
+    
+    
 
     public class LoaderBuilder
     {
