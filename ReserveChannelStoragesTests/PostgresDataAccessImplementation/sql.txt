@@ -13,3 +13,5 @@ create table reserve_channel_messages
 	persistent boolean not null,
 	additional_headers varchar(255)
 );
+
+Create index on reserve_channel_messages (id)

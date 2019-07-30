@@ -22,41 +22,39 @@ namespace LoadRunner
 
             var sw = Stopwatch.StartNew();
 
-            var generateCount = 1_000_000;
+            var generateCount = 140_000_000;
 
             var messages = CreateRandomDataLazy(generateCount);
 
             try
             {
-                var dataflow = new LoaderBuilder()
-                               .WithJsonSerializer("newtonsoft")
-                               .WithScriptFor("postgres")
-                               .WithScriptConfig(new ScriptConfig { TimeToWrite = TimeSpan.FromMinutes(1) })
-                               .WithLoaderConfig(new LoaderConfig { ParallelsCount = 1 })
-                               .Build(CancellationToken.None);
+                var script = new LoaderBuilder()
+                             .WithJsonSerializer("newtonsoft")
+                             .WithScriptFor("postgres")
+                             .WithScriptConfig(new ScriptConfig { TimeToWrite = TimeSpan.FromMinutes(10), ParallelsCount = 20, BatchSize = 10000})
+                             .Build();
 
-                await dataflow.Run(messages, CancellationToken.None);
+                await script.Run(messages, CancellationToken.None);
             }
             catch (Exception e)
             {
                 Console.WriteLine(e);
             }
 
-            TelemetryService.GetMeasurementsResult().ForEach(Console.WriteLine);
+            var measurementsResult = TelemetryService.GetMeasurementsResult();
+            measurementsResult.ForEach(Console.WriteLine);
             TelemetryService.DumpRawData();
 
             sw.Stop();
 
             Console.WriteLine($"End in {sw.Elapsed}");
+            Console.ReadLine();
         }
     }
-    
-    
+
 
     public class LoaderBuilder
     {
-        private IScript script;
-
         private string storageName = null;
         private string jsonSerizlizerName = null;
 
@@ -75,16 +73,6 @@ namespace LoadRunner
         }
 
 
-        private LoaderConfig loaderConfig;
-
-
-        public LoaderBuilder WithLoaderConfig(LoaderConfig config)
-        {
-            this.loaderConfig = config;
-            return this;
-        }
-
-
         private ScriptConfig scriptConfig;
 
 
@@ -95,7 +83,7 @@ namespace LoadRunner
         }
 
 
-        public IScript Build(CancellationToken cancellationToken)
+        public IScript Build()
         {
             var config = this.scriptConfig ?? new ScriptConfig();
 
@@ -111,10 +99,10 @@ namespace LoadRunner
             {
                 case "aerospike":
                     var aerospike = new AerospikeDataAccess(new ZeroFormatterWrapper());
-                    return new AerospikeSimpleWriteRead();
+                    return new AerospikeSimpleWriteRead(aerospike, config);
                 case "postgres":
                     var postgres = new PostgresDataAccess();
-                    return new PostgresSimpleWriteRead(postgres, config);
+                    return new PostgresSimpleWriteReadScript(postgres, config);
                 case "kafka":
                     var kafka = new KafkaDataAccess(JsonServiceFactory.GetSerializer(jsonSerializerName ?? "newtonsoft"));
                     return new KafkaSimpleWriteRead();
@@ -125,10 +113,5 @@ namespace LoadRunner
                     throw new NotSupportedException();
             }
         }
-    }
-
-    public class LoaderConfig
-    {
-        public int ParallelsCount { get; set; } = 10;
     }
 }

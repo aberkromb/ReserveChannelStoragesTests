@@ -14,15 +14,15 @@ namespace ReserveChannelStoragesTests
 
     public class AerospikeDataAccess : IDataAccess<MessageData, Key, Unit>
     {
-        private static readonly string Hostname = "192.168.99.100";
-
         private AsyncClient _client;
         private readonly IBinarySerializer _binarySerializer;
 
-        private WritePolicy _writePolicy;
-        private Policy _policy;
-        private ScanPolicy _scanPolicy;
+        private readonly WritePolicy _writePolicy;
+        private readonly Policy _policy;
+        private readonly ScanPolicy _scanPolicy;
 
+//        private static readonly string Hostname = "192.168.99.100";
+        private static readonly string Hostname = "localhost";
         private const string defaultBinName = "msg";
         private const string defaultNs = "reserve_channel";
         private const string defaultSetName = "messages";
@@ -36,7 +36,7 @@ namespace ReserveChannelStoragesTests
 
             _writePolicy = new WritePolicy();
             _policy = new Policy();
-            _scanPolicy = new ScanPolicy();
+            _scanPolicy = new ScanPolicy { scanPercent = 10 };
         }
 
 
@@ -50,13 +50,16 @@ namespace ReserveChannelStoragesTests
 
         private async Task<Unit> AddInternal(MessageData @object, CancellationToken token)
         {
-            var key = new Key(defaultNs, defaultSetName, this._binarySerializer.Serialize(@object.Id));
+            var key = this.CreateKey(@object);
             var bin = new Bin(defaultBinName, _binarySerializer.Serialize(@object));
 
             await _client.Put(_writePolicy, token, key, bin);
 
             return Unit.Value;
         }
+
+
+        public Key CreateKey(MessageData @object) => new Key(defaultNs, defaultSetName, this._binarySerializer.Serialize(@object.Id));
 
 
         public Task<MessageData> Get(Key key, CancellationToken token)
@@ -73,6 +76,17 @@ namespace ReserveChannelStoragesTests
         }
 
 
+        public Task<List<MessageData>> GetBatch(int count, CancellationToken token)
+        {
+            var scanPolicy = new ScanPolicy { scanPercent = count };
+            var list = new List<MessageData>();
+
+            this.ScanAllInternal(scanPolicy, list);
+
+            return Task.FromResult(list);
+        }
+
+
         public async Task<List<MessageData>> GetAll(Key key, CancellationToken token)
         {
             Task<List<MessageData>> Func() => GetAllInternal(key, token);
@@ -80,21 +94,23 @@ namespace ReserveChannelStoragesTests
         }
 
 
-        public Task<List<MessageData>> GetBatch(int count, CancellationToken token)
+        private Task<List<MessageData>> GetAllInternal(Key __, CancellationToken _)
         {
-            throw new System.NotImplementedException();
+            var scanPolicy = new ScanPolicy();
+            var list = new List<MessageData>();
+
+            this.ScanAllInternal(scanPolicy, list);
+
+            return Task.FromResult(list);
         }
 
 
-        private Task<List<MessageData>> GetAllInternal(Key key, CancellationToken token)
+        private void ScanAllInternal(ScanPolicy scanPolicy, List<MessageData> list)
         {
-            var list = new List<MessageData>();
-            _client.ScanAll(_scanPolicy,
-                            key.ns,
-                            key.setName,
-                            (key1, record) => list.Add(GetAerospikeDataObjectFrom(key1, record).Data));
-
-            return Task.FromResult(list);
+            this._client.ScanAll(scanPolicy,
+                                 defaultNs,
+                                 defaultSetName,
+                                 (key1, record) => list.Add(this.GetAerospikeDataObjectFrom(key1, record).Data));
         }
 
 
@@ -105,9 +121,12 @@ namespace ReserveChannelStoragesTests
         }
 
 
-        public Task<bool> DeleteBatch(IEnumerable<Key> keys, CancellationToken token)
+        public async Task<bool> DeleteBatch(IEnumerable<Key> keys, CancellationToken token)
         {
-            throw new System.NotImplementedException();
+            foreach (var key in keys)
+                await this._client.Delete(null, token, key);
+
+            return true;
         }
 
 
@@ -146,6 +165,5 @@ namespace ReserveChannelStoragesTests
 
 
         private MessageData ConvertRecord(Record record) => _binarySerializer.Deserialize<MessageData>((byte[]) record.GetValue(defaultBinName));
-       
     }
 }

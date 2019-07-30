@@ -46,21 +46,23 @@ namespace ReserveChannelStoragesTests.Telemetry
 
         public static void DumpRawData()
         {
-            var fileName = "RawMeasurements_" + DateTime.Now.ToString("yyyyMMddHHmmss");
-
-            foreach (var measurement in _measurements)
-                File.AppendAllText(fileName, JsonConvert.SerializeObject(measurement));
+            var fileName = "RawMeasurements_" + DateTime.Now.ToString("yyyyMMddHHmmssfff") + ".txt";
+            File.WriteAllText(fileName, JsonConvert.SerializeObject(_measurements));
         }
 
 
         public static List<MeasurementsResult> GetMeasurementsResult()
         {
+            var fileName = "OperationMeasurements_" + DateTime.Now.ToString("yyyyMMddHHmmssfff") + ".txt";
+
             var dict = ToDictionary();
 
             var results = new List<MeasurementsResult>(dict.Keys.Count);
 
             foreach (var (operationName, measurements) in dict)
                 results.Add(ToMeasurementsResult(operationName, measurements));
+
+            File.WriteAllText(fileName, JsonConvert.SerializeObject(results));
 
             return results;
         }
@@ -97,7 +99,7 @@ namespace ReserveChannelStoragesTests.Telemetry
 
 
         public override string ToString() =>
-            $"OperationName: {OperationName}, \n Average: {Average},\n Median: {Median},\n Max: {Max},\n Min: {Min},\n Percetile90: {this.Percetile90},\n Percetile99: {this.Percetile99},\n Count: {Count},\n Total: {TotalElapsed}";
+            $"OperationName: {OperationName} \n Average: {Average}\n Median: {Median}\n Max: {Max}\n Min: {Min}\n Percetile90: {this.Percetile90}\n Percetile99: {this.Percetile99}\n Count: {Count}\n Total: {TotalElapsed}";
     }
 
     public static class TelemetryExtensions
