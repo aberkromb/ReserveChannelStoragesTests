@@ -71,6 +71,13 @@ namespace ReserveChannelStoragesTests.KafkaDataAccessImplementation
         }
 
 
+        public Task<List<MessageData>> GetBatch(int count, CancellationToken token)
+        {
+            Task<List<MessageData>> Func() => this.GetAllInternal(count);
+            return MeasureIt(Func);
+        }
+
+
         public Task<List<MessageData>> GetAll(Unit key, CancellationToken token)
         {
             Task<List<MessageData>> Func() => this.GetAllInternal();
@@ -78,13 +85,7 @@ namespace ReserveChannelStoragesTests.KafkaDataAccessImplementation
         }
 
 
-        public Task<List<MessageData>> GetBatch(int count, CancellationToken token)
-        {
-            throw new NotImplementedException();
-        }
-
-
-        private Task<List<MessageData>> GetAllInternal()
+        private Task<List<MessageData>> GetAllInternal(int? count = null)
         {
             var result = new List<MessageData>();
 
@@ -99,7 +100,9 @@ namespace ReserveChannelStoragesTests.KafkaDataAccessImplementation
                     if (consumeResult is null) continue;
                     if (consumeResult.IsPartitionEOF) break;
 
-                    result.Add(this.jsonService.Deserialize<MessageData>(consumeResult.Value) );
+                    result.Add(this.jsonService.Deserialize<MessageData>(consumeResult.Value));
+
+                    if (count.HasValue && result.Count >= count) break;
                 }
                 catch (ConsumeException e)
                 {

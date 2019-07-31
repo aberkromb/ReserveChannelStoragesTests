@@ -7,7 +7,7 @@ namespace Generator
     public class MessageData
     {
         [Index(0)]
-        public virtual  Guid Id { get; set; }
+        public virtual  int Id { get; set; }
         [Index(1)]
         public virtual  string Server { get; set; }
         [Index(2)]

@@ -4,8 +4,10 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Generator;
+using Rocks.Dataflow;
 using Rocks.Dataflow.Fluent;
 using static ReserveChannelStoragesTests.Helpers;
+using static ReserveChannelStoragesTests.Telemetry.TelemetryService;
 
 namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
 {
@@ -29,10 +31,10 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
             var writeCts = new CancellationTokenSource(this._config.TimeToWrite);
             var readCts = new CancellationTokenSource(this._config.TimeToRead);
 
-            Task Write() => this.Write(messages, writeCts.Token);
+            Task Write() => this.WriteAll(messages, writeCts.Token);
             await Try(Write);
 
-            Task Read() => this.Read(readCts.Token);
+            Task Read() => this.GetAndDelete(readCts.Token);
             await Try(Read);
 
             Console.WriteLine(await this.AmountRemaining(cancellationToken));
@@ -40,7 +42,7 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
         }
 
 
-        private Task Write(IEnumerable<MessageData> messages, CancellationToken cancellationToken)
+        private Task WriteAll(IEnumerable<MessageData> messages, CancellationToken cancellationToken)
         {
             Console.WriteLine($"Start writing... {DateTimeFormatedString}");
             var dataflow = DataflowFluent
@@ -53,24 +55,50 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
                                    })
                            .CreateDataflow();
 
-            return dataflow.ProcessAsync(messages, cancellationToken);
+            Task Func() => dataflow.ProcessAsync(messages, cancellationToken);
+
+            return MeasureIt(Func);
         }
 
 
-        private async Task Read(CancellationToken cancellationToken)
+        private async Task GetAndDelete(CancellationToken cancellationToken)
         {
             Console.WriteLine($"Start reading... {DateTimeFormatedString}");
+
+            Task Func() => this.GetAndDeleteInternal(cancellationToken);
+            await MeasureIt(Func);
+
+            Console.WriteLine($"End reading... {DateTimeFormatedString}");
+        }
+
+
+        private async Task GetAndDeleteInternal(CancellationToken cancellationToken)
+        {
             while (!cancellationToken.IsCancellationRequested)
             {
-                var batch = await this._dataAccess.GetBatch(this._config.BatchSize, cancellationToken);
+                var batch = await this._dataAccess.GetBatch(this._config.GetBatchSize, cancellationToken);
                 if (batch.Count > 0)
-                    await this._dataAccess.DeleteBatch(batch.Select(data => data.Id), cancellationToken);
+                    await this.CreateDeleteDataflow().ProcessAsync(batch, cancellationToken);
                 else
                     break;
             }
         }
 
 
-        private async Task<int> AmountRemaining(CancellationToken cancellationToken) => (await this._dataAccess.GetAll(Guid.Empty, cancellationToken)).Count;
+        private Dataflow<MessageData> CreateDeleteDataflow()
+        {
+            return DataflowFluent
+                   .ReceiveDataOfType<MessageData>()
+                   .ProcessAsync(data => this._dataAccess.Delete(data.Id, CancellationToken.None))
+                   .WithMaxDegreeOfParallelism(this._config.ParallelsCount)
+                   .WithDefaultExceptionLogger((exception, o) => Console.WriteLine(exception))
+                   .Action(x =>
+                           {
+                           })
+                   .CreateDataflow();
+        }
+
+
+        private async Task<int> AmountRemaining(CancellationToken cancellationToken) => (await this._dataAccess.GetAll(int.MinValue, cancellationToken)).Count;
     }
 }

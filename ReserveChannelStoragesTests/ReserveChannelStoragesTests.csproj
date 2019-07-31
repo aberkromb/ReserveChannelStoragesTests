@@ -23,7 +23,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\progaudi.tarantool\src\progaudi.tarantool\progaudi.tarantool.csproj" />
       <ProjectReference Include="..\Generator\Generator.csproj" />
     </ItemGroup>
 

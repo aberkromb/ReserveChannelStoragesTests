@@ -60,9 +60,9 @@ namespace ReserveChannelStoragesTests.AerospikeDataAccessImplementation
             Console.WriteLine($"Start reading... {DateTimeFormatedString}");
             while (!cancellationToken.IsCancellationRequested)
             {
-                var batch = await this._dataAccess.GetBatch(this._config.BatchSize, cancellationToken);
+                var batch = await this._dataAccess.GetBatch(this._config.GetBatchSize, cancellationToken);
                 if (batch.Count > 0)
-                    await this._dataAccess.DeleteBatch(batch.Select(data => this._dataAccess.CreateKey(data)), cancellationToken);
+                    await this._dataAccess.DeleteBatch(batch.Select(data => AerospikeDataAccess.CreateKey()), cancellationToken);
                 else
                     break;
             }

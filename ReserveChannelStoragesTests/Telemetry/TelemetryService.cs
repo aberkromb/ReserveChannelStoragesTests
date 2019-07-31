@@ -12,7 +12,7 @@ namespace ReserveChannelStoragesTests.Telemetry
 {
     public static class TelemetryService
     {
-        private static ConcurrentBag<(string, long)> _measurements = new ConcurrentBag<(string, long)>();
+        public static ConcurrentBag<(string, long)> _measurements = new ConcurrentBag<(string, long)>();
 
 
         public static async Task<TOut> MeasureIt<TOut>(Func<Task<TOut>> func, [CallerMemberName] string caller = "")
@@ -25,6 +25,17 @@ namespace ReserveChannelStoragesTests.Telemetry
             _measurements.Add((caller, sw.ElapsedMilliseconds));
 
             return functionResult;
+        }
+
+
+        public static async Task MeasureIt(Func<Task> func, [CallerMemberName] string caller = "")
+        {
+            var sw = Stopwatch.StartNew();
+
+            await func();
+
+            sw.Stop();
+            _measurements.Add((caller, sw.ElapsedMilliseconds));
         }
 
 

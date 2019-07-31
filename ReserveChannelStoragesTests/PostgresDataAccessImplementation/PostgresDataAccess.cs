@@ -14,7 +14,7 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
     //docker run --name some-postgres -p 5432:5432 -e POSTGRES_USER=test_user -e POSTGRES_PASSWORD=tests -d -v pgdata:/D/pg  postgres
     
     // docker run --name some-postgres -p 5432:5432 -e POSTGRES_USER=test_user -e POSTGRES_PASSWORD=tests -d postgres
-    public class PostgresDataAccess : IDataAccess<MessageData, Guid, Unit>
+    public class PostgresDataAccess : IDataAccess<MessageData, int, Unit>
     {
         private static readonly string ConnectionString =
             "Host=localhost;Port=5432;Username=test_user;Password=tests;Database=postgres;Minimum Pool Size=200;Maximum Pool Size=1000";
@@ -36,7 +36,7 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
             using var connection = await this.CreateConnection();
             using var command = connection.CreateCommand();
             command.CommandText = commandText;
-            command.Parameters.Add(new NpgsqlParameter<Guid>("@id", @object.Id));
+            command.Parameters.Add(new NpgsqlParameter<int>("@id", @object.Id));
             command.Parameters.Add(new NpgsqlParameter<DateTimeOffset>("@message_date", @object.MessageDate));
             command.Parameters.Add(new NpgsqlParameter<string>("@message_type", @object.MessageType));
             command.Parameters.Add(new NpgsqlParameter<string>("@additional_headers", @object.AdditionalHeaders));
@@ -56,21 +56,21 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
         }
 
 
-        public Task<MessageData> Get(Guid key, CancellationToken token)
+        public Task<MessageData> Get(int key, CancellationToken token)
         {
             Task<MessageData> Func() => GetInternal(key, token);
             return MeasureIt(Func);
         }
 
 
-        private async Task<MessageData> GetInternal(Guid key, CancellationToken token)
+        private async Task<MessageData> GetInternal(int key, CancellationToken token)
         {
             var commandText =
                 "select id, message_date, message_type, additional_headers, application, exception,exchange, message, message_routing_key, persistent, server, ttl from reserve_channel_messages where id = @id";
 
             using var connection = await this.CreateConnection();
             using var command = new NpgsqlCommand(commandText, connection);
-            command.Parameters.Add(new NpgsqlParameter<Guid>("@id", key));
+            command.Parameters.Add(new NpgsqlParameter<int>("@id", key));
 
             MessageData result = null;
 
@@ -82,7 +82,7 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
         }
 
 
-        public Task<List<MessageData>> GetAll(Guid key, CancellationToken token)
+        public Task<List<MessageData>> GetAll(int key, CancellationToken token)
         {
             Task<List<MessageData>> Func() => GetAllInternal(token);
             return MeasureIt(Func);
@@ -131,20 +131,20 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
         }
 
 
-        public Task<bool> Delete(Guid key, CancellationToken token)
+        public Task<bool> Delete(int key, CancellationToken token)
         {
             Task<bool> Func() => this.DeleteInternal(key, token);
             return MeasureIt(Func);
         }
 
 
-        private async Task<bool> DeleteInternal(Guid key, CancellationToken token)
+        private async Task<bool> DeleteInternal(int key, CancellationToken token)
         {
             var commandText = "delete from reserve_channel_messages where id = @id";
 
             using var connection = await this.CreateConnection();
             using var command = new NpgsqlCommand(commandText, connection);
-            command.Parameters.Add(new NpgsqlParameter<Guid>("@id", key));
+            command.Parameters.Add(new NpgsqlParameter<int>("@id", key));
 
             await command.ExecuteNonQueryAsync(token);
 
@@ -152,20 +152,20 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
         }
 
 
-        public Task<bool> DeleteBatch(IEnumerable<Guid> keys, CancellationToken token)
+        public Task<bool> DeleteBatch(IEnumerable<int> keys, CancellationToken token)
         {
             Task<bool> Func() => this.DeleteBatchInternal(keys, token);
             return MeasureIt(Func);
         }
 
 
-        private async Task<bool> DeleteBatchInternal(IEnumerable<Guid> keys, CancellationToken token)
+        private async Task<bool> DeleteBatchInternal(IEnumerable<int> keys, CancellationToken token)
         {
             var commandText = "delete from reserve_channel_messages where id = ANY(@ids)";
 
             using var connection = await this.CreateConnection();
             using var command = new NpgsqlCommand(commandText, connection);
-            command.Parameters.Add("@ids", NpgsqlDbType.Array | NpgsqlDbType.Uuid).Value = keys.ToArray();
+            command.Parameters.Add("@ids", NpgsqlDbType.Array | NpgsqlDbType.Integer).Value = keys.ToArray();
 
             await command.ExecuteNonQueryAsync(token);
 
@@ -173,7 +173,7 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
         }
 
 
-        public Task<List<MessageData>> GetAllByCondition(Guid key, CancellationToken token)
+        public Task<List<MessageData>> GetAllByCondition(int key, CancellationToken token)
         {
             Task<List<MessageData>> Func() => GetAllByConditionInternal(token);
             return MeasureIt(Func);
@@ -198,7 +198,7 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
         {
             var result = new MessageData
                          {
-                             Id = reader.GetGuid(0),
+                             Id = reader.GetInt32(0),
                              MessageDate = reader.GetDateTime(1),
                              MessageType = reader.GetString(2),
                              AdditionalHeaders = reader.GetString(3),

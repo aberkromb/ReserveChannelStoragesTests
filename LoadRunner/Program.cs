@@ -1,10 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using ReserveChannelStoragesTests;
 using ReserveChannelStoragesTests.AerospikeDataAccessImplementation;
 using ReserveChannelStoragesTests.BinarySerializers;
+using ReserveChannelStoragesTests.Json;
 using ReserveChannelStoragesTests.JsonSerializers;
 using ReserveChannelStoragesTests.KafkaDataAccessImplementation;
 using ReserveChannelStoragesTests.PostgresDataAccessImplementation;
@@ -18,11 +22,14 @@ namespace LoadRunner
     {
         static async Task Main(string[] args)
         {
+            var msg = CreateRandomData(1);
+            File.WriteAllText("text.txt",JsonConvert.SerializeObject(msg));
+            
             Console.WriteLine("Starting...");
 
             var sw = Stopwatch.StartNew();
 
-            var generateCount = 140_000_000;
+            var generateCount = 150_000_000;
 
             var messages = CreateRandomDataLazy(generateCount);
 
@@ -31,8 +38,15 @@ namespace LoadRunner
                 var script = new LoaderBuilder()
                              .WithJsonSerializer("newtonsoft")
                              .WithScriptFor("postgres")
-                             .WithScriptConfig(new ScriptConfig { TimeToWrite = TimeSpan.FromMinutes(10), ParallelsCount = 20, BatchSize = 10000})
+                             .WithScriptConfig(new ScriptConfig { TimeToWrite = TimeSpan.FromSeconds(10), ParallelsCount = 50, GetBatchSize = 1000})
                              .Build();
+
+//                var script = new LoaderBuilder()
+//                             .WithJsonSerializer("newtonsoft")
+//                             .WithScriptFor("aerospike")
+//                             //в aerospike для чтения бачами используется процент от данных
+//                             .WithScriptConfig(new ScriptConfig { TimeToWrite = TimeSpan.FromMinutes(1), ParallelsCount = 20, BatchSize = 5})
+//                             .Build();
 
                 await script.Run(messages, CancellationToken.None);
             }
@@ -98,16 +112,16 @@ namespace LoadRunner
             switch (name)
             {
                 case "aerospike":
-                    var aerospike = new AerospikeDataAccess(new ZeroFormatterWrapper());
+                    var aerospike = new AerospikeDataAccess(new Utf8JsonBinaryWrapper());
                     return new AerospikeSimpleWriteRead(aerospike, config);
                 case "postgres":
                     var postgres = new PostgresDataAccess();
                     return new PostgresSimpleWriteReadScript(postgres, config);
                 case "kafka":
                     var kafka = new KafkaDataAccess(JsonServiceFactory.GetSerializer(jsonSerializerName ?? "newtonsoft"));
-                    return new KafkaSimpleWriteRead();
+                    return new KafkaSimpleWriteRead(kafka, config);
                 case "tarantool":
-                    var tarantool = new TarantoolDataAccess(JsonServiceFactory.GetSerializer(jsonSerializerName ?? "newtonsoft"));
+//                    var tarantool = new TarantoolDataAccess(JsonServiceFactory.GetSerializer(jsonSerializerName ?? "newtonsoft"));
                     return new TarantoolSimpleWriteRead();
                 default:
                     throw new NotSupportedException();
