@@ -19,5 +19,18 @@ namespace ReserveChannelStoragesTests
                 Console.WriteLine(e);
             }
         }
+        
+        public static Unit Try(Func<Unit> func)
+        {
+            try
+            {
+                return func();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                return new Unit();
+            }
+        }
     }
 }

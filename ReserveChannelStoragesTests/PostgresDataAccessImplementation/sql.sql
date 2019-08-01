@@ -1,3 +1,7 @@
+CREATE EXTENSION pgq;
+SELECT pgq.create_queue('reserve_channel');
+SELECT pgq.register_consumer('reserve_channel', 'consumer');
+
 create table reserve_channel_messages
 (
     id integer not null,

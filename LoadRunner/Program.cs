@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -7,7 +6,6 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using ReserveChannelStoragesTests;
 using ReserveChannelStoragesTests.AerospikeDataAccessImplementation;
-using ReserveChannelStoragesTests.BinarySerializers;
 using ReserveChannelStoragesTests.Json;
 using ReserveChannelStoragesTests.JsonSerializers;
 using ReserveChannelStoragesTests.KafkaDataAccessImplementation;
@@ -22,9 +20,6 @@ namespace LoadRunner
     {
         static async Task Main(string[] args)
         {
-            var msg = CreateRandomData(1);
-            File.WriteAllText("text.txt",JsonConvert.SerializeObject(msg));
-            
             Console.WriteLine("Starting...");
 
             var sw = Stopwatch.StartNew();
@@ -35,11 +30,11 @@ namespace LoadRunner
 
             try
             {
-                var script = new LoaderBuilder()
-                             .WithJsonSerializer("newtonsoft")
-                             .WithScriptFor("postgres")
-                             .WithScriptConfig(new ScriptConfig { TimeToWrite = TimeSpan.FromSeconds(10), ParallelsCount = 50, GetBatchSize = 1000})
-                             .Build();
+//                var script = new LoaderBuilder()
+//                             .WithJsonSerializer("newtonsoft")
+//                             .WithScriptFor("postgres")
+//                             .WithScriptConfig(new ScriptConfig { TimeToWrite = TimeSpan.FromMinutes(60), ParallelsCount = 200, GetBatchSize = 1000})
+//                             .Build();
 
 //                var script = new LoaderBuilder()
 //                             .WithJsonSerializer("newtonsoft")
@@ -47,6 +42,18 @@ namespace LoadRunner
 //                             //в aerospike для чтения бачами используется процент от данных
 //                             .WithScriptConfig(new ScriptConfig { TimeToWrite = TimeSpan.FromMinutes(1), ParallelsCount = 20, BatchSize = 5})
 //                             .Build();
+
+//                var script = new LoaderBuilder()
+//                             .WithJsonSerializer("newtonsoft")
+//                             .WithScriptFor("kafka")
+//                             .WithScriptConfig(new ScriptConfig { TimeToWrite = TimeSpan.FromMinutes(1), WriteParallelsCount = 1, GetBatchSize = 1000})
+//                             .Build();
+
+                var script = new LoaderBuilder()
+                             .WithJsonSerializer("newtonsoft")
+                             .WithScriptFor("tarantool")
+                             .WithScriptConfig(new ScriptConfig { TimeToWrite = TimeSpan.FromMinutes(60), WriteParallelsCount = 200, GetBatchSize = 1000})
+                             .Build();
 
                 await script.Run(messages, CancellationToken.None);
             }
@@ -121,8 +128,8 @@ namespace LoadRunner
                     var kafka = new KafkaDataAccess(JsonServiceFactory.GetSerializer(jsonSerializerName ?? "newtonsoft"));
                     return new KafkaSimpleWriteRead(kafka, config);
                 case "tarantool":
-//                    var tarantool = new TarantoolDataAccess(JsonServiceFactory.GetSerializer(jsonSerializerName ?? "newtonsoft"));
-                    return new TarantoolSimpleWriteRead();
+                    var tarantool = new TarantoolDataAccess(JsonServiceFactory.GetSerializer(jsonSerializerName ?? "newtonsoft"));
+                    return new TarantoolSimpleWriteRead(tarantool, config);
                 default:
                     throw new NotSupportedException();
             }

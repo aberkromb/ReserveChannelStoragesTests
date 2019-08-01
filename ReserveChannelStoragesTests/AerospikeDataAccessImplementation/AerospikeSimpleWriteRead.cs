@@ -46,7 +46,7 @@ namespace ReserveChannelStoragesTests.AerospikeDataAccessImplementation
             var dataflow = DataflowFluent
                            .ReceiveDataOfType<MessageData>()
                            .ProcessAsync(data => this._dataAccess.Add(data, CancellationToken.None))
-                           .WithMaxDegreeOfParallelism(this._config.ParallelsCount)
+                           .WithMaxDegreeOfParallelism(this._config.WriteParallelsCount)
                            .WithDefaultExceptionLogger((exception, o) => Console.WriteLine(exception))
                            .Action(x => { })
                            .CreateDataflow();
@@ -62,7 +62,7 @@ namespace ReserveChannelStoragesTests.AerospikeDataAccessImplementation
             {
                 var batch = await this._dataAccess.GetBatch(this._config.GetBatchSize, cancellationToken);
                 if (batch.Count > 0)
-                    await this._dataAccess.DeleteBatch(batch.Select(data => AerospikeDataAccess.CreateKey()), cancellationToken);
+                    await this._dataAccess.DeleteBatch(batch.Select(data => AerospikeDataAccess.CreateKey(data.Id)), cancellationToken);
                 else
                     break;
             }

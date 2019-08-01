@@ -8,6 +8,7 @@ using Generator;
 using Newtonsoft.Json;
 using ReserveChannelStoragesTests.BinarySerializers;
 using static ReserveChannelStoragesTests.Filters;
+using static ReserveChannelStoragesTests.Helpers;
 using static ReserveChannelStoragesTests.Telemetry.TelemetryService;
 
 namespace ReserveChannelStoragesTests
@@ -53,7 +54,7 @@ namespace ReserveChannelStoragesTests
 
         private async Task<Unit> AddInternal(MessageData @object, CancellationToken token)
         {
-            var key = CreateKey();
+            var key = CreateKey(@object.Id);
             var bin = new Bin(@object.Id.ToString(), this._binarySerializer.Serialize(@object));
 
             await _client.Put(_writePolicy, token, key, bin);
@@ -62,17 +63,17 @@ namespace ReserveChannelStoragesTests
         }
 
 
-        public static Key CreateKey() => new Key(defaultNs, defaultSetName, DateTimeOffset.Now.ToUnixTimeMilliseconds());
+        public static Key CreateKey(int id) => new Key(defaultNs, defaultSetName, id);
 
 
-        public Task<List<MessageData>> Get(Key key, CancellationToken token)
+        public Task<MessageData> Get(Key key, CancellationToken token)
         {
-            Task<List<MessageData>> Func() => GetInternal(key, token);
+            Task<MessageData> Func() => GetInternal(key, token);
             return MeasureIt(Func);
         }
 
 
-        private async Task<List<MessageData>> GetInternal(Key key, CancellationToken token)
+        private async Task<MessageData> GetInternal(Key key, CancellationToken token)
         {
             var record = await _client.Get(_policy, token, key);
             return this.ConvertRecordToMessages(record);
@@ -93,31 +94,22 @@ namespace ReserveChannelStoragesTests
         {
             var keys = new List<Key>();
 
-            try
-            {
-                this._client.ScanAll(_getBatchScanPolicy,
-                                     defaultNs,
-                                     defaultSetName,
-                                     async (key, record) =>
-                                     {
-                                         keys.Add(key);
-
-                                         await Delete(key, CancellationToken.None);
-                                         
-                                         if(keys.Count >= count)
-                                             throw new AerospikeException("");
-                                     });
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
-
-            count = keys.Count > count ? count : keys.Count;
+            Try(() =>
+                {
+                    this._client.ScanAll(this._getBatchScanPolicy,
+                                         defaultNs,
+                                         defaultSetName,
+                                         (key, record) =>
+                                         {
+                                             keys.Add(key);
+                                             if (keys.Count >= count) throw new AerospikeException("Max batch size");
+                                         });
+                    return Unit.Value;
+                });
 
             var result = new List<MessageData>();
-            for (var i = 0; i < count; i++)
-                result.AddRange(await Get(keys[i], CancellationToken.None));
+            foreach (var key in keys)
+                result.Add(await Get(key, CancellationToken.None));
 
             return result;
         }
@@ -145,7 +137,7 @@ namespace ReserveChannelStoragesTests
             this._client.ScanAll(scanPolicy,
                                  defaultNs,
                                  defaultSetName,
-                                 (_, record) => list.AddRange(ConvertRecordToMessages(record)));
+                                 (_, record) => list.Add(ConvertRecordToMessages(record)));
         }
 
 
@@ -205,26 +197,16 @@ namespace ReserveChannelStoragesTests
                                  k.setName,
                                  (key, record) =>
                                  {
-                                     var messages = this.ConvertRecordToMessages(record);
-                                     foreach (var message in messages)
-                                     {
-                                         if (IsFiltersPassed(message))
-                                             list.Add(message);
-                                     }
+                                     var message = this.ConvertRecordToMessages(record);
+                                     if (IsFiltersPassed(message))
+                                         list.Add(message);
                                  });
 
             return Task.FromResult(list);
         }
 
 
-        private List<MessageData> ConvertRecordToMessages(Record record)
-        {
-            var list = new List<MessageData>(record.bins.Count);
-
-            foreach (var bin in record.bins)
-                list.Add(this._binarySerializer.Deserialize<MessageData>((byte[]) record.GetValue(bin.Key)));
-
-            return list;
-        }
+        private MessageData ConvertRecordToMessages(Record record) =>
+            this._binarySerializer.Deserialize<MessageData>((byte[]) record.GetValue(defaultBinName));
     }
 }

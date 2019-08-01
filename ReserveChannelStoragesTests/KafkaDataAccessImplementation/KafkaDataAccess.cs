@@ -11,15 +11,19 @@ using static ReserveChannelStoragesTests.Telemetry.TelemetryService;
 
 namespace ReserveChannelStoragesTests.KafkaDataAccessImplementation
 {
-    //docker run -p 2181:2181 -p 9092:9092 --env ADVERTISED_HOST=`docker-machine ip \`docker-machine active\`` --env ADVERTISED_PORT=9092 spotify/kafka
+    //docker run -p 2181:2181 -p 9092:9092 --env ADVERTISED_HOST=`localhost` --env ADVERTISED_PORT=9092 spotify/kafka
+    // TODO https://github.com/confluentinc/confluent-kafka-dotnet/blob/master/examples/Consumer/Program.cs
     public class KafkaDataAccess : IDataAccess<MessageData, Unit, Unit>, IDisposable
     {
         private ProducerConfig producerConfig = new ProducerConfig { BootstrapServers = "localhost:9092" };
 
         private ConsumerConfig consumerConfig = new ConsumerConfig
                                                 {
-                                                    GroupId = "test-consumer-group", BootstrapServers = "localhost:9092", AutoOffsetReset = AutoOffsetReset.Earliest,
-                                                    EnablePartitionEof = true
+                                                    GroupId = "test-consumer-group",
+                                                    BootstrapServers = "localhost:9092", 
+                                                    AutoOffsetReset = AutoOffsetReset.Earliest,
+                                                    EnablePartitionEof = true,
+                                                    
                                                 };
 
         private readonly IProducer<Null, string> producer;
@@ -60,6 +64,7 @@ namespace ReserveChannelStoragesTests.KafkaDataAccessImplementation
             try
             {
                 var consumeResult = this.consumer.Consume(token);
+                this.consumer.Commit(consumeResult);
                 return Task.FromResult(this.jsonService.Deserialize<MessageData>(consumeResult.Value));
             }
             catch (ConsumeException e)

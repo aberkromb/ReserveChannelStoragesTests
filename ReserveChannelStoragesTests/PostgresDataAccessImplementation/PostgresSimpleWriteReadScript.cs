@@ -34,7 +34,7 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
             Task Write() => this.WriteAll(messages, writeCts.Token);
             await Try(Write);
 
-            Task Read() => this.GetAndDelete(readCts.Token);
+            Task Read() => this.Read(readCts.Token);
             await Try(Read);
 
             Console.WriteLine(await this.AmountRemaining(cancellationToken));
@@ -48,7 +48,7 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
             var dataflow = DataflowFluent
                            .ReceiveDataOfType<MessageData>()
                            .ProcessAsync(data => this._dataAccess.Add(data, CancellationToken.None))
-                           .WithMaxDegreeOfParallelism(this._config.ParallelsCount)
+                           .WithMaxDegreeOfParallelism(this._config.WriteParallelsCount)
                            .WithDefaultExceptionLogger((exception, o) => Console.WriteLine(exception))
                            .Action(x =>
                                    {
@@ -61,7 +61,7 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
         }
 
 
-        private async Task GetAndDelete(CancellationToken cancellationToken)
+        private async Task Read(CancellationToken cancellationToken)
         {
             Console.WriteLine($"Start reading... {DateTimeFormatedString}");
 
@@ -90,7 +90,7 @@ namespace ReserveChannelStoragesTests.PostgresDataAccessImplementation
             return DataflowFluent
                    .ReceiveDataOfType<MessageData>()
                    .ProcessAsync(data => this._dataAccess.Delete(data.Id, CancellationToken.None))
-                   .WithMaxDegreeOfParallelism(this._config.ParallelsCount)
+                   .WithMaxDegreeOfParallelism(this._config.WriteParallelsCount)
                    .WithDefaultExceptionLogger((exception, o) => Console.WriteLine(exception))
                    .Action(x =>
                            {

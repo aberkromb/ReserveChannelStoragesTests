@@ -25,17 +25,17 @@ namespace StorageTester
 //            File.WriteAllText("json.txt", JsonConvert.SerializeObject(messages));
 
 
-            await AerospikeTester(messages);
-//            await TarantoolTester(messages);
+//            await AerospikeTester(messages);
+            await TarantoolTester(messages);
 
 //            await KafkaTester(messages);
         }
 
 
-//        private static async Task TarantoolTester(List<MessageData> messages)
-//        {
-//            var dataAccess = new TarantoolDataAccess(JsonServiceFactory.GetSerializer("newtonsoft"));
-//
+        private static async Task TarantoolTester(List<MessageData> messages)
+        {
+            var dataAccess = new TarantoolDataAccess(JsonServiceFactory.GetSerializer("newtonsoft"));
+
 //            for (var i = 0; i < messages.Count; i++)
 //            {
 //                var message = messages[i];
@@ -44,38 +44,44 @@ namespace StorageTester
 //
 //                var savedObject = await dataAccess.Get(id, CancellationToken.None);
 //
-//                await dataAccess.Delete(id, CancellationToken.None);
+////                await dataAccess.Delete(id, CancellationToken.None);
 //            }
-//
-//            var list = await dataAccess.GetAll(-1L, CancellationToken.None);
-//
-////            WriteLine(list.Count);
-//
-//            GetMeasurementsResult().ForEach(WriteLine);
-//        }
 
+            var list = await dataAccess.GetAll(-1L, CancellationToken.None);
+            foreach (var messageData in list)
+            {
+                await dataAccess.Delete(messageData.Id, CancellationToken.None);
+            }
 
-//        private static async Task KafkaTester(List<MessageData> messages)
-//        {
-//            var dataAccess = new KafkaDataAccess(JsonServiceFactory.GetSerializer("newtonsoft"));
-//
-//            for (var i = 0; i < messages.Count; i++)
-//            {
-//                var message = messages[i];
-//
-//                await dataAccess.Add(message, CancellationToken.None);
-//
-////                var savedObject = await dataAccess.Get(dataObj.Data.Id, CancellationToken.None);
-//
-////                await dataAccess.Delete(dataObj.Data.Id, CancellationToken.None);
-//            }
-//
-//            var list = await dataAccess.GetAll(Unit.Value, CancellationToken.None);
-//
 //            WriteLine(list.Count);
-//
-//            GetMeasurementsResult().ForEach(WriteLine);
-//        }
+
+            GetMeasurementsResult().ForEach(WriteLine);
+        }
+
+
+        private static async Task KafkaTester(List<MessageData> messages)
+        {
+            var dataAccess = new KafkaDataAccess(JsonServiceFactory.GetSerializer("newtonsoft"));
+
+            var list = await dataAccess.GetAll(Unit.Value, CancellationToken.None);
+
+            WriteLine(list.Count);
+            for (var i = 0; i < messages.Count; i++)
+            {
+                var message = messages[i];
+
+                await dataAccess.Add(message, CancellationToken.None);
+
+//                var savedObject = await dataAccess.Get(dataObj.Data.Id, CancellationToken.None);
+
+//                await dataAccess.Delete(dataObj.Data.Id, CancellationToken.None);
+            }
+
+            var batch = await dataAccess.GetBatch(100, CancellationToken.None);
+
+
+            GetMeasurementsResult().ForEach(WriteLine);
+        }
 
 
         private static async Task PostgresTester(List<MessageData> messages)
