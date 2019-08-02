@@ -19,6 +19,7 @@ namespace ReserveChannelStoragesTests.TarantoolDataAccessImplementation
 // s = box.schema.space.create('reservechannel', {id = 999, field_count = 2, engine = 'vinyl', format = {{name='id', type = 'integer'}, {name='data', type='string'}} })
 // seq = box.schema.sequence.create('seq')
 // s:create_index('Q',{sequence='seq'})
+// s:create_index('Q',{parts={1, 'integer'}})
     public class TarantoolDataAccess : IDataAccess<MessageData, long, long>
     {
         private readonly Box _box;

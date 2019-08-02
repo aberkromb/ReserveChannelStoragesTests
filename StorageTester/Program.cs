@@ -113,7 +113,8 @@ namespace StorageTester
             var binarySerializer = new Utf8JsonBinaryWrapper();
             var dataAccess = new AerospikeDataAccess(binarySerializer);
 
-            Console.WriteLine(await  dataAccess.DeleteAll());
+            Console.WriteLine(await dataAccess.DeleteAll());
+
             
             for (var i = 0; i < messages.Count; i++)
             {

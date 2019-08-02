@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Generator;
+using ReserveChannelStoragesTests.Telemetry;
 using Rocks.Dataflow;
 using Rocks.Dataflow.Fluent;
 using static ReserveChannelStoragesTests.Helpers;
@@ -34,6 +35,8 @@ namespace ReserveChannelStoragesTests.TarantoolDataAccessImplementation
             Task Write() => this.WriteAll(messages, writeCts.Token);
             await Try(Write);
 
+            GetMeasurementsResult().ForEach(Console.WriteLine);
+            
             Task Read() => this.Read(readCts.Token);
             await Try(Read);
 

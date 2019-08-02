@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Generator;
+using ReserveChannelStoragesTests.Telemetry;
 using Rocks.Dataflow.Fluent;
 using static ReserveChannelStoragesTests.Helpers;
 using static ReserveChannelStoragesTests.Telemetry.TelemetryService;
@@ -33,6 +34,8 @@ namespace ReserveChannelStoragesTests.KafkaDataAccessImplementation
             Task Write() => this.WriteAll(messages, writeCts.Token);
             await Try(Write);
 
+            GetMeasurementsResult().ForEach(Console.WriteLine);
+            
             Task Read() => this.Read(readCts.Token);
             await Try(Read);
 
@@ -76,9 +79,7 @@ namespace ReserveChannelStoragesTests.KafkaDataAccessImplementation
                 while (true)
                 {
                     var message = await this._dataAccess.Get(Unit.Value, CancellationToken.None);
-                    var res = message is null;
-                    Console.WriteLine(res);
-                    if (res) break;
+                    if (message is null) break;
                 }
             }
 

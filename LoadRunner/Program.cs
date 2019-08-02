@@ -36,12 +36,11 @@ namespace LoadRunner
 //                             .WithScriptConfig(new ScriptConfig { TimeToWrite = TimeSpan.FromMinutes(60), ParallelsCount = 200, GetBatchSize = 1000})
 //                             .Build();
 
-//                var script = new LoaderBuilder()
-//                             .WithJsonSerializer("newtonsoft")
-//                             .WithScriptFor("aerospike")
-//                             //в aerospike для чтения бачами используется процент от данных
-//                             .WithScriptConfig(new ScriptConfig { TimeToWrite = TimeSpan.FromMinutes(1), ParallelsCount = 20, BatchSize = 5})
-//                             .Build();
+                var script = new LoaderBuilder()
+                             .WithJsonSerializer("newtonsoft")
+                             .WithScriptFor("aerospike")
+                             .WithScriptConfig(new ScriptConfig { TimeToWrite = TimeSpan.FromMinutes(60), WriteParallelsCount = 200, GetBatchSize = 5})
+                             .Build();
 
 //                var script = new LoaderBuilder()
 //                             .WithJsonSerializer("newtonsoft")
@@ -49,11 +48,11 @@ namespace LoadRunner
 //                             .WithScriptConfig(new ScriptConfig { TimeToWrite = TimeSpan.FromMinutes(1), WriteParallelsCount = 1, GetBatchSize = 1000})
 //                             .Build();
 
-                var script = new LoaderBuilder()
-                             .WithJsonSerializer("newtonsoft")
-                             .WithScriptFor("tarantool")
-                             .WithScriptConfig(new ScriptConfig { TimeToWrite = TimeSpan.FromMinutes(60), WriteParallelsCount = 200, GetBatchSize = 1000})
-                             .Build();
+//                var script = new LoaderBuilder()
+//                             .WithJsonSerializer("newtonsoft")
+//                             .WithScriptFor("tarantool")
+//                             .WithScriptConfig(new ScriptConfig { TimeToWrite = TimeSpan.FromMinutes(1), WriteParallelsCount = 200, GetBatchSize = 1000})
+//                             .Build();
 
                 await script.Run(messages, CancellationToken.None);
             }

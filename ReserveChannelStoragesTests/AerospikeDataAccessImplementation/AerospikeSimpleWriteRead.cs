@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Generator;
 using Rocks.Dataflow.Fluent;
 using static ReserveChannelStoragesTests.Helpers;
+using static ReserveChannelStoragesTests.Telemetry.TelemetryService;
 
 namespace ReserveChannelStoragesTests.AerospikeDataAccessImplementation
 {
@@ -32,7 +33,7 @@ namespace ReserveChannelStoragesTests.AerospikeDataAccessImplementation
             Task Write() => this.Write(messages, writeCts.Token);
             await Try(Write);
 
-            Task Read() => this.ReadAndDelete(readCts.Token);
+            Task Read() => this.Read(readCts.Token);
             await Try(Read);
 
             Console.WriteLine(await this.AmountRemaining(cancellationToken));
@@ -48,24 +49,31 @@ namespace ReserveChannelStoragesTests.AerospikeDataAccessImplementation
                            .ProcessAsync(data => this._dataAccess.Add(data, CancellationToken.None))
                            .WithMaxDegreeOfParallelism(this._config.WriteParallelsCount)
                            .WithDefaultExceptionLogger((exception, o) => Console.WriteLine(exception))
-                           .Action(x => { })
+                           .Action(x =>
+                                   {
+                                   })
                            .CreateDataflow();
 
-            return dataflow.ProcessAsync(messages, cancellationToken);
+            return MeasureIt(() => dataflow.ProcessAsync(messages, cancellationToken));
         }
 
 
-        private async Task ReadAndDelete(CancellationToken cancellationToken)
+        private async Task Read(CancellationToken cancellationToken)
         {
             Console.WriteLine($"Start reading... {DateTimeFormatedString}");
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                var batch = await this._dataAccess.GetBatch(this._config.GetBatchSize, cancellationToken);
-                if (batch.Count > 0)
-                    await this._dataAccess.DeleteBatch(batch.Select(data => AerospikeDataAccess.CreateKey(data.Id)), cancellationToken);
-                else
-                    break;
-            }
+            Console.WriteLine(await MeasureIt(() => this._dataAccess.DeleteAll()));
+
+//            while (!cancellationToken.IsCancellationRequested)
+//            {
+//                var batch = await this._dataAccess.GetBatch(this._config.GetBatchSize, cancellationToken);
+//                if (batch.Count > 0)
+//                {
+//                    foreach (var messageData in batch)
+//                        await this._dataAccess.Delete(this._dataAccess.CreateKey(messageData.Id), cancellationToken);
+//                }
+//                else
+//                    break;
+//            }
         }
 
 

@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Aerospike.Client;
 using Generator;
-using Newtonsoft.Json;
 using ReserveChannelStoragesTests.BinarySerializers;
 using static ReserveChannelStoragesTests.Filters;
 using static ReserveChannelStoragesTests.Helpers;
@@ -13,7 +11,7 @@ using static ReserveChannelStoragesTests.Telemetry.TelemetryService;
 
 namespace ReserveChannelStoragesTests
 {
-    // docker run -tid -d -v D:\as:/opt/aerospike/data --name aerospike -e "MEM_GB=2" -e "STORAGE_GB=100" -e "NAMESPACE=reserve_channel" -p 3000:3000 -p 3001:3001 -p 3002:3002 -p 3003:3003 aerospike/aerospike-server
+    // docker run -tid -d -v D:\as:/opt/aerospike/data --name aerospike -e "MEM_GB=4" -e "STORAGE_GB=100" -e "NAMESPACE=reserve_channel" -p 3000:3000 -p 3001:3001 -p 3002:3002 -p 3003:3003 aerospike/aerospike-server
 
     public class AerospikeDataAccess
     {
@@ -55,7 +53,7 @@ namespace ReserveChannelStoragesTests
         private async Task<Unit> AddInternal(MessageData @object, CancellationToken token)
         {
             var key = CreateKey(@object.Id);
-            var bin = new Bin(@object.Id.ToString(), this._binarySerializer.Serialize(@object));
+            var bin = new Bin(defaultBinName, this._binarySerializer.Serialize(@object));
 
             await _client.Put(_writePolicy, token, key, bin);
 
@@ -63,7 +61,7 @@ namespace ReserveChannelStoragesTests
         }
 
 
-        public static Key CreateKey(int id) => new Key(defaultNs, defaultSetName, id);
+        public Key CreateKey(int id) => new Key(defaultNs, defaultSetName, id);
 
 
         public Task<MessageData> Get(Key key, CancellationToken token)
@@ -117,12 +115,12 @@ namespace ReserveChannelStoragesTests
 
         public async Task<List<MessageData>> GetAll(Key _, CancellationToken token)
         {
-            Task<List<MessageData>> Func() => GetAllInternal(_, token);
+            Task<List<MessageData>> Func() => GetAllInternal();
             return await MeasureIt(Func);
         }
 
 
-        private Task<List<MessageData>> GetAllInternal(Key __, CancellationToken _)
+        private Task<List<MessageData>> GetAllInternal()
         {
             var list = new List<MessageData>();
 
@@ -137,25 +135,30 @@ namespace ReserveChannelStoragesTests
             this._client.ScanAll(scanPolicy,
                                  defaultNs,
                                  defaultSetName,
-                                 (_, record) => list.Add(ConvertRecordToMessages(record)));
+                                 (key, record) => list.Add(ConvertRecordToMessages(record)));
         }
 
 
         public Task<int> DeleteAll()
         {
-            var keys = new List<Key>();
+//            var keys = new List<Key>();
+            var keys = 0;
 
             this._client.ScanAll(_getBatchScanPolicy,
                                  defaultNs,
                                  defaultSetName,
-                                 (key, record) => keys.Add(key));
+                                 async (key, record) =>
+                                 {
+                                     if (await Delete(key, CancellationToken.None))
+                                         Interlocked.Increment(ref keys);
+                                 });
 
-            foreach (var key in keys)
-            {
-                this._client.Delete(this._writePolicy, key);
-            }
+//            foreach (var key in keys)
+//            {
+//                this._client.Delete(this._writePolicy, key);
+//            }
 
-            return Task.FromResult<int>(keys.Count);
+            return Task.FromResult(keys);
         }
 
 
